@@ -25,6 +25,8 @@ enum AppearancePreference: String, CaseIterable, Identifiable {
 final class MonitoringStore: ObservableObject {
     @Published private(set) var latest: SystemSample?
     @Published private(set) var history = SampleHistory()
+    @Published private(set) var applicationUsage: ApplicationUsageSnapshot?
+    @Published private(set) var hasApplicationSample = false
     @Published var refreshInterval: Int {
         didSet {
             guard refreshInterval != oldValue else { return }
@@ -39,6 +41,7 @@ final class MonitoringStore: ObservableObject {
     private let defaults: UserDefaults
     private let sampler = SystemSampler()
     private var isSleeping = false
+    private var applicationSession: UUID?
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -52,6 +55,35 @@ final class MonitoringStore: ObservableObject {
                 self.latest = sample
             }
         }
+        sampler.onApplications = { [weak self] session, snapshot in
+            DispatchQueue.main.async {
+                guard let self, self.applicationSession == session else { return }
+                self.applicationUsage = snapshot
+                self.hasApplicationSample = true
+                self.updateApplicationDescriptors()
+            }
+        }
+    }
+
+    func setPanelOpen(_ open: Bool) {
+        applicationSession = open ? UUID() : nil
+        applicationUsage = nil
+        hasApplicationSample = false
+        updateApplicationDescriptors()
+    }
+
+    private func updateApplicationDescriptors() {
+        let applications: [ApplicationDescriptor]
+        if applicationSession != nil {
+            applications = NSWorkspace.shared.runningApplications.compactMap { app in
+                guard !app.isTerminated, app.activationPolicy != .prohibited,
+                      let bundleURL = app.bundleURL else { return nil }
+                return ApplicationDescriptor(pid: app.processIdentifier,
+                    name: app.localizedName ?? bundleURL.deletingPathExtension().lastPathComponent,
+                    bundlePath: bundleURL.path)
+            }
+        } else { applications = [] }
+        sampler.setApplications(applications, session: applicationSession)
     }
 
     func start() { sampler.start(interval: Double(refreshInterval)) }

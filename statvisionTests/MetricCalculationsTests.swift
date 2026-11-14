@@ -156,6 +156,118 @@ final class MemoryCalculatorTests: XCTestCase {
     }
 }
 
+final class ApplicationUsageTests: XCTestCase {
+    private func process(_ pid: Int32 = 1, app: String = "Editor", ticks: UInt64 = 100,
+                         memory: UInt64 = 100, start: UInt64 = 1,
+                         at timestamp: Double = 1) -> ProcessResourceSample {
+        ProcessResourceSample(pid: pid, startTime: start, appID: "/\(app).app",
+                              appName: app, cpuTicks: ticks, memoryBytes: memory,
+                              timestamp: timestamp)
+    }
+
+    func testFirstSampleHasMemoryButNoInventedCPU() throws {
+        var calculator = ApplicationUsageCalculator()
+        let snapshot = calculator.consume([process()], secondsPerTick: 1, processorCount: 8,
+                                          maximumGap: 15)
+        let app = try XCTUnwrap(snapshot.applications.first)
+        XCTAssertNil(app.cpuPercentage)
+        XCTAssertEqual(app.memoryBytes, 100)
+        XCTAssertTrue(snapshot.topFive(by: .cpu).isEmpty)
+        XCTAssertEqual(snapshot.topFive(by: .memory).count, 1)
+    }
+
+    func testHelpersAreAggregatedAndCPUNormalizedToWholeMachine() throws {
+        var calculator = ApplicationUsageCalculator()
+        _ = calculator.consume([process(), process(2)], secondsPerTick: 0.001,
+                               processorCount: 8, maximumGap: 15)
+        let snapshot = calculator.consume([process(ticks: 2100, memory: 500, at: 3),
+                                          process(2, ticks: 4100, memory: 200, at: 3)],
+                                         secondsPerTick: 0.001, processorCount: 8, maximumGap: 15)
+        let app = try XCTUnwrap(snapshot.applications.first)
+        XCTAssertEqual(snapshot.applications.count, 1)
+        XCTAssertEqual(try XCTUnwrap(app.cpuPercentage), 37.5, accuracy: 0.0001)
+        XCTAssertEqual(app.memoryBytes, 700)
+        XCTAssertEqual(app.processCount, 2)
+    }
+
+    func testAppleSiliconMachTimebaseIsApplied() throws {
+        var calculator = ApplicationUsageCalculator()
+        let scale = 125.0 / 3.0 / 1_000_000_000
+        _ = calculator.consume([process(ticks: 0)], secondsPerTick: scale,
+                               processorCount: 8, maximumGap: 15)
+        let result = calculator.consume([process(ticks: 48_000_000, at: 3)],
+                                        secondsPerTick: scale, processorCount: 8, maximumGap: 15)
+        XCTAssertEqual(try XCTUnwrap(result.applications.first?.cpuPercentage), 12.5,
+                       accuracy: 0.0001)
+    }
+
+    func testReusedPIDOrChangedApplicationRequiresNewBaseline() throws {
+        for sample in [process(ticks: 500, start: 2, at: 3),
+                       process(app: "Browser", ticks: 500, at: 3)] {
+            var calculator = ApplicationUsageCalculator()
+            _ = calculator.consume([process()], secondsPerTick: 1, processorCount: 8, maximumGap: 15)
+            let snapshot = calculator.consume([sample], secondsPerTick: 1,
+                                               processorCount: 8, maximumGap: 15)
+            XCTAssertNil(try XCTUnwrap(snapshot.applications.first).cpuPercentage)
+        }
+    }
+
+    func testInvalidIntervalsAndCountersDoNotProduceCPUValues() throws {
+        for sample in [process(ticks: 99, at: 3), process(at: 1),
+                       process(at: 0), process(at: 100)] {
+            var calculator = ApplicationUsageCalculator()
+            _ = calculator.consume([process()], secondsPerTick: 1, processorCount: 8, maximumGap: 15)
+            let snapshot = calculator.consume([sample], secondsPerTick: 1,
+                                               processorCount: 8, maximumGap: 15)
+            XCTAssertNil(try XCTUnwrap(snapshot.applications.first).cpuPercentage)
+        }
+        var calculator = ApplicationUsageCalculator()
+        XCTAssertTrue(calculator.consume([process(at: .nan)], secondsPerTick: 1,
+                                         processorCount: 8, maximumGap: 15).applications.isEmpty)
+    }
+
+    func testPanelResetAndMissingProcessesDiscardOldCounters() throws {
+        var calculator = ApplicationUsageCalculator()
+        _ = calculator.consume([process()], secondsPerTick: 1, processorCount: 8, maximumGap: 15)
+        let empty = calculator.consume([], secondsPerTick: 1, processorCount: 8, maximumGap: 15)
+        XCTAssertTrue(empty.applications.isEmpty)
+        let returned = calculator.consume([process(at: 3)], secondsPerTick: 1,
+                                           processorCount: 8, maximumGap: 15)
+        XCTAssertNil(try XCTUnwrap(returned.applications.first).cpuPercentage)
+        calculator.reset()
+        let reopened = calculator.consume([process(at: 5)], secondsPerTick: 1,
+                                           processorCount: 8, maximumGap: 15)
+        XCTAssertNil(try XCTUnwrap(reopened.applications.first).cpuPercentage)
+    }
+
+    func testRankingsHaveIndependentTopFivesAndStableTies() {
+        let apps = (1...7).map { index in
+            ApplicationUsage(id: "\(index)", name: "App \(index)",
+                             cpuPercentage: Double(index), memoryBytes: UInt64(8 - index),
+                             processCount: 1)
+        }
+        let snapshot = ApplicationUsageSnapshot(applications: apps, unreadableProcesses: 1)
+        XCTAssertEqual(snapshot.topFive(by: .cpu).map(\.id), ["7", "6", "5", "4", "3"])
+        XCTAssertEqual(snapshot.topFive(by: .memory).map(\.id), ["1", "2", "3", "4", "5"])
+        let ties = ApplicationUsageSnapshot(applications: [
+            ApplicationUsage(id: "b", name: "Same", cpuPercentage: 0, memoryBytes: 0, processCount: 1),
+            ApplicationUsage(id: "a", name: "Same", cpuPercentage: 0, memoryBytes: 0, processCount: 1)
+        ], unreadableProcesses: 0)
+        XCTAssertEqual(ties.topFive(by: .cpu).map(\.id), ["a", "b"])
+    }
+
+    func testOverflowIsUnavailableAndNewHelperDoesNotInventCPU() throws {
+        var calculator = ApplicationUsageCalculator()
+        _ = calculator.consume([process()], secondsPerTick: 1, processorCount: 1, maximumGap: 15)
+        let snapshot = calculator.consume([process(ticks: 200, memory: .max, at: 3),
+                                          process(2, memory: 1, at: 3)],
+                                         secondsPerTick: 1, processorCount: 1, maximumGap: 15)
+        let app = try XCTUnwrap(snapshot.applications.first)
+        XCTAssertNil(app.memoryBytes)
+        XCTAssertNil(app.cpuPercentage)
+    }
+}
+
 final class HistoryAndPressureTests: XCTestCase {
     private func sample(at timestamp: Double, missing: Bool = false) -> SystemSample {
         SystemSample(timestamp: timestamp,

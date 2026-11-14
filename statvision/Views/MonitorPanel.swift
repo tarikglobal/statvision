@@ -7,6 +7,17 @@ struct MonitorPanel: View {
     let closePanel: () -> Void
 
     var body: some View {
+        ScrollView {
+            panelContent
+        }
+        .frame(width: 336, height: min(760, max(300, (NSScreen.main?.visibleFrame.height ?? 830) - 70)))
+        .background(.regularMaterial)
+        .tint(.teal)
+        .preferredColorScheme(store.appearance.colorScheme)
+        .onExitCommand(perform: closePanel)
+    }
+
+    private var panelContent: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 9) {
                 Image(systemName: "waveform.path.ecg")
@@ -60,6 +71,9 @@ struct MonitorPanel: View {
                 .font(.caption2).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Divider()
+            ApplicationUsageView(snapshot: store.applicationUsage,
+                                 hasSample: store.hasApplicationSample)
+            Divider()
             HStack {
                 Button(action: openSettings) { Label("Ayarlar", systemImage: "gearshape") }
                     .keyboardShortcut(",", modifiers: .command)
@@ -73,10 +87,6 @@ struct MonitorPanel: View {
         }
         .padding(16)
         .frame(width: 336)
-        .background(.regularMaterial)
-        .tint(.teal)
-        .preferredColorScheme(store.appearance.colorScheme)
-        .onExitCommand(perform: closePanel)
     }
 
     private var chartEnd: TimeInterval { SampleClock.now }

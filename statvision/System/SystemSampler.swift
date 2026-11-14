@@ -12,8 +12,12 @@ enum SampleClock {
 /// The UI only receives immutable value snapshots.
 final class SystemSampler {
     var onSample: ((SystemSample) -> Void)?
+    var onApplications: ((UUID, ApplicationUsageSnapshot?) -> Void)?
     private let queue = DispatchQueue(label: "com.statvision.sampling", qos: .utility)
     private let reader = SystemReader()
+    private let applicationSampler = ApplicationSampler()
+    private var applications: [ApplicationDescriptor] = []
+    private var applicationSession: UUID?
     private var timer: DispatchSourceTimer?
     private var pressureSource: DispatchSourceMemoryPressure?
     private var notifiedPressure: MemoryPressure = .unavailable
@@ -26,6 +30,7 @@ final class SystemSampler {
             self.interval = [1.0, 2.0, 5.0].contains(interval) ? interval : 2
             self.timer?.cancel()
             self.calculator.reset()
+            self.applicationSampler.reset()
             self.installPressureSourceIfNeeded()
             self.sample()
             let timer = DispatchSource.makeTimerSource(queue: self.queue)
@@ -52,12 +57,33 @@ final class SystemSampler {
         queue.async { [weak self] in self?.cancelSources() }
     }
 
+    func setApplications(_ applications: [ApplicationDescriptor], session: UUID?) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            let changedSession = self.applicationSession != session
+            self.applications = applications
+            self.applicationSession = session
+            if changedSession {
+                self.applicationSampler.reset()
+                if session != nil { self.sampleApplications() }
+            }
+        }
+    }
+
+    private func sampleApplications() {
+        guard let session = applicationSession else { return }
+        let snapshot = applicationSampler.sample(applications: applications,
+                                                 maximumGap: max(15, interval * 3))
+        onApplications?(session, snapshot)
+    }
+
     private func cancelSources() {
         timer?.cancel()
         timer = nil
         pressureSource?.cancel()
         pressureSource = nil
         notifiedPressure = .unavailable
+        applicationSampler.reset()
     }
 
     private func installPressureSourceIfNeeded() {
@@ -91,6 +117,7 @@ final class SystemSampler {
             : (notifiedPressure != .unavailable ? .notification : .unavailable)
         onSample?(SystemSample(timestamp: timestamp, cpu: cpu, memory: reader.memory(),
                                pressure: resolvedPressure, pressureSource: origin))
+        sampleApplications()
     }
 
     deinit {

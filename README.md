@@ -13,6 +13,7 @@ Hazır uygulamayı açmak ve başka Mac’lere göndermek için [kullanım ve pa
 - **Durum:** `MonitoringStore` değişmez ölçüm sonuçlarını ana kuyrukta yayımlar. Kullanıcı tercihleri `UserDefaults` içinde saklanır. Ölçümler diske kaydedilmez.
 - **Grafikler:** SwiftUI `Canvas`, zaman damgalı son 60 saniyeyi çizer. Ayrı çizim zamanlayıcısı ve animasyon yoktur. Panel kapanınca hosting controller kaldırılır; grafik görünümleri yaşamaz, ölçümler ve menü çubuğu devam eder.
 - **Saf hesaplamalar:** `Metrics` katmanı arayüzden ve Mach çağrılarından bağımsızdır; XCTest ve yerel Swift paketi ile test edilebilir.
+- **Uygulama sıralaması:** Panelin altındaki CPU/RAM sekmeleri ayrı ilk 5 listelerini gösterir. `libproc` okumaları aynı arka plan kuyruğunda, yalnızca panel açıkken yapılır. Küçük ekranlarda panel kaydırılabilir.
 
 ## Dosya yapısı
 
@@ -28,12 +29,15 @@ statvision/
   Metrics/
     MetricModels.swift
     MetricCalculations.swift
+    ApplicationMetrics.swift
   System/
     SystemSampler.swift
+    ApplicationSampler.swift
   Views/
     MonitorPanel.swift
     HistoryChart.swift
     SettingsView.swift
+    ApplicationUsageView.swift
   Resources/
     Info.plist
     AppIcon.icns
@@ -55,7 +59,7 @@ README.md
 - **Xcode 15 veya sonrası**, Swift 5.9 veya sonrası derleyici. Projenin Swift dil modu 5’tir; Swift 6 derleyicisinin Swift 5 modu da kullanılabilir.
 - macOS SDK, standart mimariler. Debug mevcut Mac’in mimarisini derler. Release, standart `arm64` ve `x86_64` mimarilerini destekler; Apple Silicon’da Rosetta gerekmez.
 - Bundle identifier: `com.statvision.mac`; ürün adı: `statvision`.
-- App Sandbox ve Hardened Runtime açık. Sandbox dosyası yalnızca `com.apple.security.app-sandbox` içerir. Ağ, dosya erişimi veya diğer ek yetkiler yoktur.
+- Hardened Runtime açık. Başka uygulamaların işlem ölçümlerini okuyabilmek için App Sandbox kapalıdır; entitlement dosyası boştur. Yönetici yetkisi, Erişilebilirlik, Tam Disk Erişimi veya ağ bağlantısı istenmez.
 - Yerel imzalama: `CODE_SIGN_STYLE = Manual`, `CODE_SIGN_IDENTITY = -` (**Sign to Run Locally / ad hoc**). Yerel çalıştırma için Apple Developer hesabı veya Team gerekmez.
 - Info.plist açıkça projede tanımlıdır; otomatik üretilmez. Paylaşılan `statvision` şeması uygulamayı ve test hedefini içerir.
 
@@ -64,7 +68,7 @@ README.md
 1. Xcode’da **statvision.xcodeproj** dosyasını açın. Uygulamayı açmak için `Package.swift` yerine bu projeyi kullanın.
 2. **statvision** şemasını ve **My Mac** hedefini seçin.
 3. **⌘R** ile çalıştırın. Menü çubuğunda `CPU … RAM …` görünür. İlk CPU yüzdesi ikinci başarılı ölçümde gelir.
-4. Menü çubuğuna tıklayın. Panelde CPU, RAM/kapasite, RAM yüzdesi, bellek baskısı ve iki grafik bulunur.
+4. Menü çubuğuna tıklayın. Panelde CPU, RAM/kapasite, RAM yüzdesi, bellek baskısı ve iki grafik bulunur. En alttaki **En çok tüketen 5 uygulama** bölümünde CPU/RAM sekmeleriyle sıralamayı değiştirin.
 5. **Ayarlar** üzerinden 1, 2 veya 5 saniye ve Sistem/Açık/Koyu görünümü seçin. Seçim yeniden başlatmalar arasında korunur.
 
 Komut satırı alternatifi, proje dizininde:
@@ -116,6 +120,18 @@ RAM doluluğu üzerinden eşik veya tahmin **yapılmaz**. Önce salt okunur `sys
 
 Bu üç seviyeli gösterge, Etkinlik Monitörü’nün sürekli bellek baskısı grafiğinin yeniden üretimi değildir.
 
+### En çok tüketen uygulamalar
+
+`NSWorkspace.runningApplications` uygulama adlarını ve paket yollarını verir. `proc_listallpids` ve `proc_pidpath` ile bu uygulamaların ana işlemleri ve kendi paketleri içindeki yardımcı işlemleri eşleştirilir; aynı paket için tek satır üretilir. Komut satırı araçları ve bağımsız sistem servisleri bu uygulama listesine dahil değildir. Paket dışında çalışan, sorumluluğu güvenilir biçimde belirlenemeyen WebKit/XPC servisleri uygulamaya eklenmez; bu nedenle bazı uygulama toplamları Etkinlik Monitörü'nden düşük olabilir.
+
+`proc_pid_rusage(RUSAGE_INFO_V2)` içindeki `ri_user_time + ri_system_time` sayaçlarının farkı, `mach_timebase_info` ile saniyeye çevrilir. CPU yüzdesi `deltaCPU / deltaZaman / mantıksalÇekirdekSayısı × 100` olur; üstteki toplam CPU ile aynı, tüm makinenin %100 olduğu ölçek kullanılır. Apple Silicon'da Mach zaman birimi nanosaniye varsayılmaz. İlk okuma, yeni yardımcı işlem, PID yeniden kullanımı (`ri_proc_start_abstime`), sayaç gerilemesi, hata ve uzun kesintilerde CPU için yeni taban beklenir.
+
+RAM sıralaması `ri_phys_footprint` değerlerinin toplamıdır; GB/MB etiketleri 1024 tabanlıdır. Bu, uygulamaya yüklenen bellek ayak izidir; üstteki sistem fiziksel sayfa formülünden farklıdır. Sıkıştırılmış bellek muhasebesi ve paylaşılan kaynakların yüklenmesi nedeniyle satırları toplamak sistemin kullanılan RAM değerini vermez. Çıkmış veya okunamayan işlemler atlanır; eksik okuma varsa panel bunu belirtir. RAM ilk okumada, CPU ikinci geçerli okumada gösterilir. CPU ve RAM için ayrı ayrı en yüksek beş uygulama seçilir; beşten az uygulama ölçülebiliyorsa yalnızca mevcut olanlar gösterilir.
+
+Bu API'lerin alanları için [Apple rusage_info_v2 tanımı](https://developer.apple.com/documentation/kernel/rusage_info_v2) ve [XNU ölçüm uygulaması](https://github.com/apple-oss-distributions/xnu/blob/main/osfmk/kern/bsd_kern.c) incelenebilir.
+
+Panel kapandığında uygulama taraması ve işlem sayaç geçmişi bırakılır; sistem CPU/RAM ölçümü devam eder. Panel yeniden açılınca yeni CPU tabanı alınır. Ölçümler veya uygulama adları diske yazılmaz ve ağa gönderilmez.
+
 ### Uyku, kesintiler ve zaman
 
 `NSWorkspace.willSleepNotification` zamanlayıcıyı ve baskı kaynağını kapatır; CPU tabanı sıfırlanır. Uyanışta kaynaklar yeniden oluşturulur. İlk CPU okuması tabandır; uyku boyunca ortalama üretilmez. Bildirim kaçarsa uzun örnek aralığı kontrolü CPU’yu korur.
@@ -135,12 +151,12 @@ Bu üç seviyeli gösterge, Etkinlik Monitörü’nün sürekli bellek baskısı
 - Yerel AppKit düğmesi ve SwiftUI kontrolleri, VoiceOver etiketleri ve okunabilir değerler içerir. Grafikler son/en düşük/en yüksek yüzde özeti sunar.
 - Panel açıkken **⌘,** ayarları açar, **⌘Q** çıkar, **Escape** paneli kapatır. Ayarlar penceresinde Escape pencereyi kapatır. macOS Klavye ile Gezinme açıkken Tab/Shift-Tab, odaklanmış düğmede Space/Return kullanılabilir. Menü çubuğuna macOS’un Control-F8 kısayoluyla ulaşılabilir; klavyeye göre Fn gerekebilir.
 - Baskı durumları hem yazı hem simgeyle belirtilir. Yerel renkler açık/koyu görünümü izler; grafik çizgileri yüksek kontrast tercihinde kalınlaşır.
-- Ağ bağlantısı, alt süreç, işlem taraması veya işlem sonlandırma yoktur. Yönetici yetkisi istenmez. Uygulama başlangıç öğesi kaydetmez.
+- Ağ bağlantısı, alt süreç başlatma veya işlem sonlandırma yoktur. İşlem taraması yalnızca panel açıkken çalışır. Yönetici yetkisi istenmez. Uygulama başlangıç öğesi kaydetmez.
 - Geçmiş varsayılan aralıkta yaklaşık 31, 1 saniyede en fazla 61 örnektir. CPU ve RAM sürekli ölçülür; panel kapalıyken grafik çizimi yoktur. Sabit bir pil/CPU tüketimi iddiası yapılmaz; donanım üzerinde Instruments ile ölçülmelidir.
 
 ## Testler ve doğrulama
 
-20 XCTest, gerçek sistemden bağımsız kontrollü sayaç girdileriyle hesaplamaları denetler. Uygulama çalışma zamanında bu test girdilerini veya rastgele veri kullanmaz.
+29 XCTest, gerçek sistemden bağımsız kontrollü sayaç girdileriyle hesaplamaları denetler. Uygulama çalışma zamanında bu test girdilerini veya rastgele veri kullanmaz. Uygulama sıralaması testleri yardımcı işlem toplamlarını, Apple Silicon zaman dönüşümünü, PID yeniden kullanımını, panel kapanışındaki taban sıfırlamayı ve iki ayrı ilk 5 sıralamasını da kapsar.
 
 Kapsam: ilk CPU örneği; lifetime yerine delta; nice sayacı; 0/100 sınırları; çok çekirdek normalizasyonu; sıfır fark; sayaç sıfırlanması/32 bit taşma; uzun boşluk/uyku; geçersiz zaman; fiziksel sıkıştırma; dosya önbelleği ayrımı; çalışma zamanı sayfa boyutu; çıkarma/çarpma/toplama taşmaları; GB birimi; 1/2/5 saniyede ve değişen aralıklarda gerçek 60 saniye; eksik geçmiş; bildirilmemiş baskı değerleri.
 
@@ -164,7 +180,7 @@ Proje dosya başvurularını, kaynak hedef üyeliklerini, paylaşılan şemayı 
 ruby scripts/validate_project.rb
 ```
 
-**Son doğrulama — 14 Kasım 2026:** Apple Silicon üzerinde Xcode 27.2 ile Debug ve Apple Silicon + Intel Release uygulama derlemeleri başarılı. `swift test` ve Xcode test hedefinde ayrı ayrı **20 test, 0 hata**. Proje başvuruları, hedef üyelikleri, paylaşılan şema ve plist denetimleri geçti. Release paketinin iki mimarisi ve yerel imza bütünlüğü doğrulandı; masaüstüne kopyalanan uygulamanın paneli açıldı ve gerçek CPU/RAM değerleri gözlendi. VoiceOver, pil tüketimi ve gerçek cihaz uyku/uyanma davranışı ayrıca doğrulanmalıdır. Intel donanımında ve minimum macOS 13 üzerinde çalışma ayrıca denenmedi.
+**Son doğrulama — 14 Kasım 2026:** Apple Silicon üzerinde Xcode 27.2 ile Debug ve Apple Silicon + Intel Release uygulama derlemeleri başarılı. `swift test` ve Xcode test hedefinde ayrı ayrı **29 test, 0 hata**. Proje başvuruları, hedef üyelikleri, paylaşılan şema ve plist denetimleri geçti. Release paketinin iki mimarisi ve yerel imza bütünlüğü doğrulandı. Gerçek sistem verileriyle iki ayrı ilk 5 uygulama listesi, yardımcı işlem toplamları, açık/koyu panel çizimi ve panel kapanınca sonuçların bırakılması kontrol edildi. Tek çekirdekte kontrollü yoğun iş yüküyle Mach zaman dönüşümü ayrıca doğrulandı (bir çekirdek ölçeğinde yaklaşık %100). VoiceOver, pil tüketimi ve gerçek cihaz uyku/uyanma davranışı ayrıca doğrulanmalıdır. Intel donanımında ve minimum macOS 13 üzerinde çalışma ayrıca denenmedi.
 
 Önerilen kısa cihaz kontrolü: önce boşta CPU/RAM’i gözleyin; ardından normal bir iş yüküyle Etkinlik Monitörü’nün toplam CPU değerini karşılaştırın. Yenileme aralığını değiştirin, paneli kapatıp menü değerlerinin devam ettiğini kontrol edin, Mac’i uyutup uyandırın. İlk CPU değerinin yeniden beklendiğini ve uyku boşluğunun çizilmediğini doğrulayın. Sistem/Açık/Koyu görünümü ve klavye kısayollarını deneyin.
 

@@ -6,6 +6,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1000000000000000000000C /* ApplicationMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012; };
+		A1000000000000000000000D /* ApplicationSampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013; };
+		A1000000000000000000000E /* ApplicationUsageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000014; };
 		A10000000000000000000001 /* StatvisionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001; };
 		A10000000000000000000002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002; };
 		A10000000000000000000003 /* MonitoringStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003; };
@@ -30,6 +33,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		A20000000000000000000012 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationMetrics.swift; sourceTree = "<group>"; };
+		A20000000000000000000013 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationSampler.swift; sourceTree = "<group>"; };
+		A20000000000000000000014 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationUsageView.swift; sourceTree = "<group>"; };
 		A20000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatvisionApp.swift; sourceTree = "<group>"; };
 		A20000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A20000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonitoringStore.swift; sourceTree = "<group>"; };
@@ -67,9 +73,9 @@
 			sourceTree = "<group>";
 		};
 		A70000000000000000000003 = {isa = PBXGroup; children = (A20000000000000000000001, A20000000000000000000002, A20000000000000000000003); path = App; sourceTree = "<group>"; };
-		A70000000000000000000004 = {isa = PBXGroup; children = (A20000000000000000000004, A20000000000000000000005); path = Metrics; sourceTree = "<group>"; };
-		A70000000000000000000005 = {isa = PBXGroup; children = (A20000000000000000000006); path = System; sourceTree = "<group>"; };
-		A70000000000000000000006 = {isa = PBXGroup; children = (A20000000000000000000007, A20000000000000000000008, A20000000000000000000009); path = Views; sourceTree = "<group>"; };
+		A70000000000000000000004 = {isa = PBXGroup; children = (A20000000000000000000004, A20000000000000000000005, A20000000000000000000012); path = Metrics; sourceTree = "<group>"; };
+		A70000000000000000000005 = {isa = PBXGroup; children = (A20000000000000000000006, A20000000000000000000013); path = System; sourceTree = "<group>"; };
+		A70000000000000000000006 = {isa = PBXGroup; children = (A20000000000000000000007, A20000000000000000000008, A20000000000000000000009, A20000000000000000000014); path = Views; sourceTree = "<group>"; };
 		A70000000000000000000007 = {isa = PBXGroup; children = (A2000000000000000000000A, A2000000000000000000000B, A20000000000000000000011); path = Resources; sourceTree = "<group>"; };
 		A70000000000000000000008 = {isa = PBXGroup; children = (A2000000000000000000000C); path = statvisionTests; sourceTree = "<group>"; };
 		A70000000000000000000009 = {isa = PBXGroup; children = (A2000000000000000000000D, A2000000000000000000000E); name = Products; sourceTree = "<group>"; };
@@ -134,7 +140,7 @@
 		A80000000000000000000001 = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = (A10000000000000000000001, A10000000000000000000002, A10000000000000000000003, A10000000000000000000004, A10000000000000000000005, A10000000000000000000006, A10000000000000000000007, A10000000000000000000008, A10000000000000000000009);
+			files = (A10000000000000000000001, A10000000000000000000002, A10000000000000000000003, A10000000000000000000004, A10000000000000000000005, A10000000000000000000006, A10000000000000000000007, A10000000000000000000008, A10000000000000000000009, A1000000000000000000000C, A1000000000000000000000D, A1000000000000000000000E);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		A80000000000000000000002 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A1000000000000000000000A); runOnlyForDeploymentPostprocessing = 0; };
@@ -194,7 +200,7 @@
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = statvision/Resources/Info.plist;
@@ -213,7 +219,7 @@
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = statvision/Resources/Info.plist;

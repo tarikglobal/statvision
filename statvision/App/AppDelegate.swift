@@ -84,6 +84,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             return
         }
         // Create the chart views only while open. The sampling timer keeps running.
+        store.setPanelOpen(true)
         let controller = NSHostingController(rootView:
             MonitorPanel(store: store, openSettings: { [weak self] in self?.showSettings() },
                          closePanel: { [weak self] in self?.popover.performClose(nil) }))
@@ -96,6 +97,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     func popoverDidClose(_ notification: Notification) {
+        store.setPanelOpen(false)
         // Releasing the hosting controller guarantees no hidden chart rendering.
         popover.contentViewController = nil
     }
