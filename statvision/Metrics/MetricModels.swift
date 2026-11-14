@@ -46,9 +46,11 @@ struct MemoryReading: Equatable {
     let cachedBytes: UInt64
 
     var percentage: Double { Double(usedBytes) / Double(totalBytes) * 100 }
-    // Decimal GB, consistently used in the menu, panel and documentation.
-    var usedGB: Double { Double(usedBytes) / 1_000_000_000 }
-    var totalGB: Double { Double(totalBytes) / 1_000_000_000 }
+    // RAM capacity uses the binary scale (GiB), labelled GB throughout the UI.
+    // Apply the same scale to used and total bytes; percentage stays byte-based.
+    private static let bytesPerGB: Double = 1_073_741_824
+    var usedGB: Double { Double(usedBytes) / Self.bytesPerGB }
+    var totalGB: Double { Double(totalBytes) / Self.bytesPerGB }
 }
 
 enum MemoryPressure: Equatable {

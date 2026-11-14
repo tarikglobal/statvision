@@ -137,13 +137,22 @@ final class MemoryCalculatorTests: XCTestCase {
         XCTAssertNil(MemoryCalculator.calculate(pages(fileBacked: .max)))
     }
 
-    func testDecimalGBConvention() throws {
+    func testUsedAndTotalMemoryUseTheSameBinaryScale() throws {
         let result = try XCTUnwrap(MemoryCalculator.calculate(pages(
-            anonymous: 1000, purgeable: 0, wired: 0, compressed: 0,
-            fileBacked: 0, pageSize: 1_000_000, total: 8_000_000_000)))
+            anonymous: 65_536, purgeable: 0, wired: 0, compressed: 0,
+            fileBacked: 0, pageSize: 16_384, total: 8_589_934_592)))
         XCTAssertEqual(result.usedGB, 1)
         XCTAssertEqual(result.totalGB, 8)
         XCTAssertEqual(result.percentage, 12.5)
+    }
+
+    func testPhysicalRAMCapacityDisplaysSixteenInsteadOfSeventeenPointTwo() throws {
+        let result = try XCTUnwrap(MemoryCalculator.calculate(pages(
+            anonymous: 524_288, purgeable: 0, wired: 0, compressed: 0,
+            fileBacked: 0, pageSize: 16_384, total: 17_179_869_184)))
+        XCTAssertEqual(result.totalGB, 16)
+        XCTAssertEqual(result.usedGB, 8)
+        XCTAssertEqual(result.percentage, 50)
     }
 }
 

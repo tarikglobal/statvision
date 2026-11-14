@@ -106,7 +106,7 @@ RAM %        = 100 × usedBytes / physicalMemory
 
 Anonim sayfalar içindeki geri kazanılabilir purgeable bellek, app belleğinden çıkarılır. Dosya destekli sayfalar kullanılan RAM’e eklenmez. Sıkıştırıcı için fiziksel sayfalar bir kez sayılır; `total_uncompressed_pages_in_compressor` ile temsil edilen mantıksal boyut veya diskteki swap RAM’e eklenmez. `cachedBytes` tanılama için tutulan bir önbellek tahminidir; ayrı bir kapasite bölümü olarak sunulmaz ve kullanılan RAM’e eklenmez. Speculative sayfalar da ayrıca eklenmez. Taşan veya fiziksel kapasiteyi aşan tutarsız örnekler `—` olarak gösterilir.
 
-Tüm arayüzde **ondalık GB** kullanılır: 1 GB = 1.000.000.000 bayt. GiB kullanan araçlarla karşılaştırırken birimleri eşitleyin. Apple Silicon birleşik belleği, GPU ve kernel tahsislerinin sınıflandırılması nedeniyle bire bir uygulama belleği toplamı değildir.
+RAM kapasitesi tüm arayüzde **ikilik ölçekte** gösterilir: arayüzdeki GB etiketi 1.073.741.824 baytı (1024³, teknik olarak GiB) ifade eder. Böylece 16 GB fiziksel RAM, 17,2 yerine 16,0 GB görünür. Kullanılan RAM ve toplam RAM aynı bölenle dönüştürülür; kullanım yüzdesi doğrudan bayt değerlerinden hesaplanır ve bu gösterim tercihinden etkilenmez. Ondalık GB kullanan araçlarla karşılaştırırken birimleri eşitleyin. Apple Silicon birleşik belleği, GPU ve kernel tahsislerinin sınıflandırılması nedeniyle bire bir uygulama belleği toplamı değildir.
 
 ### Bellek baskısı
 

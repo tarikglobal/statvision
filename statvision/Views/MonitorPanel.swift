@@ -93,7 +93,7 @@ struct MonitorPanel: View {
         guard let sample = store.latest else { return "Sistem ölçümleri hazırlanıyor…" }
         if sample.cpu.status != .valid { return sample.cpu.status.explanation }
         if sample.memory == nil { return "RAM istatistikleri okunamadı; yeniden denenecek." }
-        return "Son 60 saniye · GB = 1 milyar bayt"
+        return "Son 60 saniye"
     }
 
     private func metric(title: String, value: String, detail: String, symbol: String) -> some View {
