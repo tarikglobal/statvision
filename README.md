@@ -4,6 +4,8 @@ Apple Silicon ile uyumlu, Swift ve SwiftUI ile yazılmış hafif macOS menü çu
 
 GitHub’ı ilk kez kullanıyorsanız [projeye özel kısa GitHub rehberini](docs/GITHUB_REHBERI.md) okuyabilirsiniz.
 
+Hazır uygulamayı açmak ve başka Mac’lere göndermek için [kullanım ve paylaşım rehberine](docs/KULLANIM.md) bakın. Uygulama simgesine çift tıklanınca panel doğrudan açılır; uygulama zaten çalışıyorsa aynı panel yeniden gösterilir.
+
 ## Mimari
 
 - **AppKit kabuğu:** `NSStatusItem` menü çubuğunda CPU yüzdesi ve kullanılan RAM’i gösterir. `NSPopover` içinde SwiftUI paneli açılır. Dock simgesi veya açılış penceresi oluşturulmaz (`LSUIElement`).
@@ -34,11 +36,15 @@ statvision/
     SettingsView.swift
   Resources/
     Info.plist
+    AppIcon.icns
     statvision.entitlements
 statvisionTests/
   MetricCalculationsTests.swift
 scripts/
   validate_project.rb
+  generate-icon.swift
+  package-release.sh
+  install-desktop.sh
 Package.swift
 README.md
 ```
@@ -158,11 +164,19 @@ Proje dosya başvurularını, kaynak hedef üyeliklerini, paylaşılan şemayı 
 ruby scripts/validate_project.rb
 ```
 
-**Son doğrulama — 14 Kasım 2026:** Apple Silicon üzerinde Xcode 27.2 ile Debug uygulama derlemesi başarılı; `swift test` ile **20 test, 0 hata**. Proje başvuruları, hedef üyelikleri, paylaşılan şema ve plist denetimleri de geçti. Testler saf ölçüm hesaplamalarını kapsar; kullanıcı arayüzü, VoiceOver, pil tüketimi ve gerçek cihaz uyku/uyanma davranışı ayrıca doğrulanmalıdır. Minimum macOS 13 uyumluluğu ayrı bir macOS 13 cihazında çalıştırılarak doğrulanmadı.
+**Son doğrulama — 14 Kasım 2026:** Apple Silicon üzerinde Xcode 27.2 ile Debug ve Apple Silicon + Intel Release uygulama derlemeleri başarılı. `swift test` ve Xcode test hedefinde ayrı ayrı **20 test, 0 hata**. Proje başvuruları, hedef üyelikleri, paylaşılan şema ve plist denetimleri geçti. Release paketinin iki mimarisi ve yerel imza bütünlüğü doğrulandı; masaüstüne kopyalanan uygulamanın paneli açıldı ve gerçek CPU/RAM değerleri gözlendi. VoiceOver, pil tüketimi ve gerçek cihaz uyku/uyanma davranışı ayrıca doğrulanmalıdır. Intel donanımında ve minimum macOS 13 üzerinde çalışma ayrıca denenmedi.
 
 Önerilen kısa cihaz kontrolü: önce boşta CPU/RAM’i gözleyin; ardından normal bir iş yüküyle Etkinlik Monitörü’nün toplam CPU değerini karşılaştırın. Yenileme aralığını değiştirin, paneli kapatıp menü değerlerinin devam ettiğini kontrol edin, Mac’i uyutup uyandırın. İlk CPU değerinin yeniden beklendiğini ve uyku boşluğunun çizilmediğini doğrulayın. Sistem/Açık/Koyu görünümü ve klavye kısayollarını deneyin.
 
 ## .app oluşturma ve dışa aktarma
+
+Tek adımda Apple Silicon + Intel Release uygulaması ve paylaşılabilir ZIP oluşturmak için:
+
+```sh
+bash scripts/package-release.sh
+```
+
+ZIP çıktısı `build/Distribution/statvision-macOS-universal.zip` konumundadır; içinde tek bir `statvision.app` paketi vardır. Betik iki mimarinin bulunduğunu ve uygulama imzasının bütünlüğünü denetler. Yerel imza, Developer ID veya Apple noter onayı anlamına gelmez.
 
 Kendi Mac’inizde kullanılacak Release `.app` için:
 

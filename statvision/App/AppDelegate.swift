@@ -50,6 +50,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
                 Task { @MainActor in self?.store.wake() }
             })
         store.start()
+        // Finder launches should produce an immediately visible result.
+        DispatchQueue.main.async { [weak self] in self?.showPanel() }
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showPanel()
+        return false
     }
 
     private func updateStatus(_ sample: SystemSample?) {
@@ -65,8 +72,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     @objc private func togglePanel() {
-        guard let button = statusItem?.button else { return }
         if popover.isShown { popover.performClose(nil); return }
+        showPanel()
+    }
+
+    private func showPanel() {
+        guard let button = statusItem?.button else { return }
+        if popover.isShown {
+            NSApp.activate(ignoringOtherApps: true)
+            popover.contentViewController?.view.window?.makeKey()
+            return
+        }
         // Create the chart views only while open. The sampling timer keeps running.
         let controller = NSHostingController(rootView:
             MonitorPanel(store: store, openSettings: { [weak self] in self?.showSettings() },

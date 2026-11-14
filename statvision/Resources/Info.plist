@@ -4,6 +4,7 @@
 <dict>
     <key>CFBundleDevelopmentRegion</key><string>tr</string>
     <key>CFBundleDisplayName</key><string>statvision</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
