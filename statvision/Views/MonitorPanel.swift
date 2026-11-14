@@ -50,9 +50,11 @@ struct MonitorPanel: View {
             Divider()
             VStack(spacing: 12) {
                 HistoryChart(title: "CPU", samples: chartSamples, end: chartEnd,
-                             metric: .cpu, color: .blue)
+                             metric: .cpu, color: .blue,
+                             currentPercentage: store.latest?.cpu.percentage)
                 HistoryChart(title: "RAM", samples: chartSamples, end: chartEnd,
-                             metric: .memory, color: .teal)
+                             metric: .memory, color: .teal,
+                             currentPercentage: store.latest?.memory?.percentage)
             }
             Text(statusExplanation)
                 .font(.caption2).foregroundStyle(.secondary)

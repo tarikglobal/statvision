@@ -18,6 +18,7 @@ struct HistoryChart: View {
     let end: TimeInterval
     let metric: ChartMetric
     let color: Color
+    let currentPercentage: Double?
     @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
@@ -25,7 +26,10 @@ struct HistoryChart: View {
             HStack {
                 Text(title).font(.caption.weight(.semibold))
                 Spacer()
-                Text("0–100% · 60 sn").font(.caption2).foregroundStyle(.secondary)
+                Text(currentPercentageText)
+                    .font(.caption.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(color)
+                    .help("Son ölçümdeki kullanım yüzdesi")
             }
             Canvas { context, size in
                 let top: CGFloat = 3
@@ -81,15 +85,21 @@ struct HistoryChart: View {
         .accessibilityValue(accessibilitySummary)
     }
 
+    private var currentPercentageText: String {
+        guard let currentPercentage, currentPercentage.isFinite else { return "—" }
+        return currentPercentage.formatted(.number.precision(.fractionLength(0))) + "%"
+    }
+
     private var accessibilitySummary: String {
         let values = samples.compactMap { metric.value(in: $0) }
-        guard let minimum = values.min(), let maximum = values.max(), let last = values.last else {
+        guard let minimum = values.min(), let maximum = values.max() else {
             return "Henüz ölçüm yok"
         }
         func percent(_ value: Double) -> String {
             value.formatted(.number.precision(.fractionLength(0))) + "%"
         }
-        return "Son \(percent(last)), en düşük \(percent(minimum)), en yüksek \(percent(maximum)). Eksik ölçümler grafikte boşluk bırakır."
+        let current = currentPercentage == nil ? "Anlık ölçüm kullanılamıyor" : "Anlık \(currentPercentageText)"
+        return "\(current), en düşük \(percent(minimum)), en yüksek \(percent(maximum)). Eksik ölçümler grafikte boşluk bırakır."
     }
 }
 
