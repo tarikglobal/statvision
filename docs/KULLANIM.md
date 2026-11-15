@@ -11,6 +11,8 @@ Panelin altındaki **En çok tüketen 5 uygulama** bölümünde **CPU** veya **R
 
 Uygulama menü çubuğunda çalışır; Dock’ta ayrı bir simge tutmaz. Finder `.app` paketini tek bir uygulama simgesi olarak gösterir. İçindeki dosyaları ayrı ayrı açmanız gerekmez.
 
+Menü çubuğunda CPU ve RAM'in yanındaki **°C** değeri sıcaklığı gösterir. Panelde **Sıcaklık** satırında ölçüm kaynağı belirtilir. Bu Mac'te en sıcak geçerli çip sensörü kullanılır; kasa yüzeyi veya ortam sıcaklığı değildir. Desteklenen sensör okunamıyorsa **— °C** görünür. Değer, Ayarlar'da seçilen 1/2/5 saniyelik ölçüm aralığıyla yenilenir.
+
 ## Başka Mac’e gönderme
 
 `statvision-macOS-universal.zip` dosyasını gönderin. Masaüstüne hazırlanan kopyanın adı `statvision-paylasim.zip` olabilir; içeriği aynıdır.

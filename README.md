@@ -8,7 +8,7 @@ Hazır uygulamayı açmak ve başka Mac’lere göndermek için [kullanım ve pa
 
 ## Mimari
 
-- **AppKit kabuğu:** `NSStatusItem` menü çubuğunda CPU yüzdesi ve kullanılan RAM’i gösterir. `NSPopover` içinde SwiftUI paneli açılır. Dock simgesi veya açılış penceresi oluşturulmaz (`LSUIElement`).
+- **AppKit kabuğu:** `NSStatusItem` menü çubuğunda CPU yüzdesi, kullanılan RAM ve sıcaklığı °C olarak gösterir. `NSPopover` içinde SwiftUI paneli açılır. Dock simgesi veya açılış penceresi oluşturulmaz (`LSUIElement`).
 - **Ölçüm servisi:** Mach bellek/CPU çağrıları ve bellek baskısı okumaları tek bir `.utility` seri kuyrukta çalışır. Bir `DispatchSourceTimer`, varsayılan 2 saniyede bir ölçüm alır; 150 ms tolerans, sistemin uyanmaları birleştirmesine yardımcı olur.
 - **Durum:** `MonitoringStore` değişmez ölçüm sonuçlarını ana kuyrukta yayımlar. Kullanıcı tercihleri `UserDefaults` içinde saklanır. Ölçümler diske kaydedilmez.
 - **Grafikler:** SwiftUI `Canvas`, zaman damgalı son 60 saniyeyi çizer. Ayrı çizim zamanlayıcısı ve animasyon yoktur. Panel kapanınca hosting controller kaldırılır; grafik görünümleri yaşamaz, ölçümler ve menü çubuğu devam eder.
@@ -30,9 +30,11 @@ statvision/
     MetricModels.swift
     MetricCalculations.swift
     ApplicationMetrics.swift
+    TemperatureMetrics.swift
   System/
     SystemSampler.swift
     ApplicationSampler.swift
+    TemperatureReader.swift
   Views/
     MonitorPanel.swift
     HistoryChart.swift
@@ -120,6 +122,14 @@ RAM doluluğu üzerinden eşik veya tahmin **yapılmaz**. Önce salt okunur `sys
 
 Bu üç seviyeli gösterge, Etkinlik Monitörü’nün sürekli bellek baskısı grafiğinin yeniden üretimi değildir.
 
+### Sıcaklık
+
+Menü çubuğunda CPU ve RAM'in yanında **°C**, panelde **Sıcaklık** satırı bulunur. Apple Silicon'da IOKit'in IOHID sıcaklık servisleri salt okunur biçimde sorgulanır. `PMU… tdie…` adlarıyla sunulan geçerli çip sensörlerinin en yükseği gösterilir: bu tek bir CPU çekirdeğinin ortalaması, kasa yüzeyi veya ortam sıcaklığı değildir. Çip sensörü yoksa `PMU… tcal` sensörü kullanılır ve panelde **PMU sıcaklık sensörü** olarak ayrıca belirtilir. Pil, `tdev` veya kaynağı belirlenemeyen sensörler çip sıcaklığı diye gösterilmez.
+
+0 °C ve altı, 150 °C ve üstü, sonsuz/NaN değerleri geçersiz sayılır. Okuma hatasında önceki değer korunmaz; menüde **— °C**, panelde açıklama görünür. Uykuda bağlantı ve değer temizlenir; uyanınca yeniden keşif yapılır. Sensör yoksa yeniden keşif denemeleri 30 saniye aralıklıdır. Başarılı ölçümde servisler yeniden kullanılır; sıcaklık sistem CPU/RAM ölçümüyle aynı 1/2/5 saniyelik aralıkta ve aynı arka plan kuyruğunda okunur, ek zamanlayıcı yoktur.
+
+IOHID sıcaklık giriş noktaları belgelenmemiş sistem arayüzleridir; semboller çalışma zamanında `dlsym` ile denetlenir. Model/macOS sürümüne göre değişebilir ve tüm Mac'lerde sıcaklık erişimi garanti edilmez. Özellikle Intel sensörleri bu sürümde desteklenmez; uygulamanın diğer ölçümleri çalışmaya devam eder. Yönetici yardımcısı, sudo, ek izin veya üçüncü taraf bağımlılık kullanılmaz. Termal durum sınıfları dereceye çevrilerek tahmin üretilmez. [IOHID sıcaklık servislerine erişim örneği](https://github.com/zackwag/mac-temp/blob/main/mac-temp.m).
+
 ### En çok tüketen uygulamalar
 
 `NSWorkspace.runningApplications` uygulama adlarını ve paket yollarını verir. `proc_listallpids` ve `proc_pidpath` ile bu uygulamaların ana işlemleri ve kendi paketleri içindeki yardımcı işlemleri eşleştirilir; aynı paket için tek satır üretilir. Komut satırı araçları ve bağımsız sistem servisleri bu uygulama listesine dahil değildir. Paket dışında çalışan, sorumluluğu güvenilir biçimde belirlenemeyen WebKit/XPC servisleri uygulamaya eklenmez; bu nedenle bazı uygulama toplamları Etkinlik Monitörü'nden düşük olabilir.
@@ -156,7 +166,7 @@ Panel kapandığında uygulama taraması ve işlem sayaç geçmişi bırakılır
 
 ## Testler ve doğrulama
 
-29 XCTest, gerçek sistemden bağımsız kontrollü sayaç girdileriyle hesaplamaları denetler. Uygulama çalışma zamanında bu test girdilerini veya rastgele veri kullanmaz. Uygulama sıralaması testleri yardımcı işlem toplamlarını, Apple Silicon zaman dönüşümünü, PID yeniden kullanımını, panel kapanışındaki taban sıfırlamayı ve iki ayrı ilk 5 sıralamasını da kapsar.
+36 XCTest, gerçek sistemden bağımsız kontrollü sayaç girdileriyle hesaplamaları denetler. Uygulama çalışma zamanında bu test girdilerini veya rastgele veri kullanmaz. Uygulama sıralaması testleri yardımcı işlem toplamlarını, Apple Silicon zaman dönüşümünü, PID yeniden kullanımını, panel kapanışındaki taban sıfırlamayı ve iki ayrı ilk 5 sıralamasını da kapsar. Sıcaklık testleri çip sensörü önceliğini, PMU yedeğini, pil/ortam ayrımını, geçersiz değerleri ve eksik ölçümleri denetler.
 
 Kapsam: ilk CPU örneği; lifetime yerine delta; nice sayacı; 0/100 sınırları; çok çekirdek normalizasyonu; sıfır fark; sayaç sıfırlanması/32 bit taşma; uzun boşluk/uyku; geçersiz zaman; fiziksel sıkıştırma; dosya önbelleği ayrımı; çalışma zamanı sayfa boyutu; çıkarma/çarpma/toplama taşmaları; GB birimi; 1/2/5 saniyede ve değişen aralıklarda gerçek 60 saniye; eksik geçmiş; bildirilmemiş baskı değerleri.
 
@@ -180,7 +190,7 @@ Proje dosya başvurularını, kaynak hedef üyeliklerini, paylaşılan şemayı 
 ruby scripts/validate_project.rb
 ```
 
-**Son doğrulama — 14 Kasım 2026:** Apple Silicon üzerinde Xcode 27.2 ile Debug ve Apple Silicon + Intel Release uygulama derlemeleri başarılı. `swift test` ve Xcode test hedefinde ayrı ayrı **29 test, 0 hata**. Proje başvuruları, hedef üyelikleri, paylaşılan şema ve plist denetimleri geçti. Release paketinin iki mimarisi ve yerel imza bütünlüğü doğrulandı. Gerçek sistem verileriyle iki ayrı ilk 5 uygulama listesi, yardımcı işlem toplamları, açık/koyu panel çizimi ve panel kapanınca sonuçların bırakılması kontrol edildi. Tek çekirdekte kontrollü yoğun iş yüküyle Mach zaman dönüşümü ayrıca doğrulandı (bir çekirdek ölçeğinde yaklaşık %100). VoiceOver, pil tüketimi ve gerçek cihaz uyku/uyanma davranışı ayrıca doğrulanmalıdır. Intel donanımında ve minimum macOS 13 üzerinde çalışma ayrıca denenmedi.
+**Son doğrulama — 15 Kasım 2026:** Apple Silicon üzerinde Xcode 27.2 ile Debug ve Apple Silicon + Intel Release uygulama derlemeleri başarılı. `swift test` ve Xcode test hedefinde ayrı ayrı **36 test, 0 hata**. Proje başvuruları, hedef üyelikleri, paylaşılan şema ve plist denetimleri geçti. Release paketinin iki mimarisi ve yerel imza bütünlüğü doğrulandı. Sıcaklık normal kullanıcı yetkileriyle gerçek çip sensöründen okundu; bağlantı sıfırlanıp yeniden okuma denendi ve masaüstüne kurulan uygulamanın sıcaklık satırında gerçek °C değeri görüldü. Önceki doğrulamada iki ayrı ilk 5 uygulama listesi, yardımcı işlem toplamları, açık/koyu panel çizimi ve panel kapanınca sonuçların bırakılması kontrol edildi; tek çekirdekte kontrollü yoğun iş yüküyle Mach zaman dönüşümü doğrulandı (bir çekirdek ölçeğinde yaklaşık %100). VoiceOver, pil tüketimi ve gerçek cihaz uyku/uyanma davranışı ayrıca doğrulanmalıdır. Intel donanımında ve minimum macOS 13 üzerinde çalışma ayrıca denenmedi.
 
 Önerilen kısa cihaz kontrolü: önce boşta CPU/RAM’i gözleyin; ardından normal bir iş yüküyle Etkinlik Monitörü’nün toplam CPU değerini karşılaştırın. Yenileme aralığını değiştirin, paneli kapatıp menü değerlerinin devam ettiğini kontrol edin, Mac’i uyutup uyandırın. İlk CPU değerinin yeniden beklendiğini ve uyku boşluğunun çizilmediğini doğrulayın. Sistem/Açık/Koyu görünümü ve klavye kısayollarını deneyin.
 

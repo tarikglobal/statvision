@@ -95,6 +95,18 @@ struct SystemSample: Equatable {
     let memory: MemoryReading?
     let pressure: MemoryPressure
     let pressureSource: PressureSource
+    let temperature: TemperatureReading?
+
+    init(timestamp: TimeInterval, cpu: CPUReading, memory: MemoryReading?,
+         pressure: MemoryPressure, pressureSource: PressureSource,
+         temperature: TemperatureReading? = nil) {
+        self.timestamp = timestamp
+        self.cpu = cpu
+        self.memory = memory
+        self.pressure = pressure
+        self.pressureSource = pressureSource
+        self.temperature = temperature
+    }
 }
 
 struct SampleHistory {

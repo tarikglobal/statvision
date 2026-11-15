@@ -20,7 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             button.action = #selector(togglePanel)
             button.font = .monospacedDigitSystemFont(ofSize: 11, weight: .medium)
             button.setAccessibilityLabel("statvision sistem monitörü")
-            button.setAccessibilityHelp("CPU ve RAM ayrıntılarını açar. Escape paneli kapatır.")
+            button.setAccessibilityHelp("CPU, RAM ve sıcaklık ayrıntılarını açar. Escape paneli kapatır.")
         }
         popover.behavior = .transient
         popover.animates = false
@@ -66,9 +66,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         let ram = sample?.memory.map {
             $0.usedGB.formatted(.number.precision(.fractionLength(1))) + " GB"
         } ?? "—"
-        statusItem?.button?.title = "CPU \(cpu)  RAM \(ram)"
-        statusItem?.button?.setAccessibilityValue("CPU \(cpu), kullanılan RAM \(ram)")
-        statusItem?.button?.toolTip = "statvision · CPU \(cpu) · RAM \(ram)"
+        let temperature = sample?.temperature?.text ?? "— °C"
+        statusItem?.button?.title = "CPU \(cpu)  RAM \(ram)  \(temperature)"
+        statusItem?.button?.setAccessibilityValue("CPU \(cpu), kullanılan RAM \(ram), sıcaklık \(temperature)")
+        let source = sample?.temperature.map { "\($0.source.title) · \($0.sensorName)" }
+            ?? "Sıcaklık sensörü kullanılamıyor"
+        statusItem?.button?.toolTip = "statvision · CPU \(cpu) · RAM \(ram) · \(temperature)\n\(source)"
     }
 
     @objc private func togglePanel() {

@@ -16,6 +16,7 @@ final class SystemSampler {
     private let queue = DispatchQueue(label: "com.statvision.sampling", qos: .utility)
     private let reader = SystemReader()
     private let applicationSampler = ApplicationSampler()
+    private let temperatureReader = TemperatureReader()
     private var applications: [ApplicationDescriptor] = []
     private var applicationSession: UUID?
     private var timer: DispatchSourceTimer?
@@ -84,6 +85,7 @@ final class SystemSampler {
         pressureSource = nil
         notifiedPressure = .unavailable
         applicationSampler.reset()
+        temperatureReader.reset()
     }
 
     private func installPressureSourceIfNeeded() {
@@ -116,7 +118,8 @@ final class SystemSampler {
         let origin: PressureSource = pressure != .unavailable ? .systemSnapshot
             : (notifiedPressure != .unavailable ? .notification : .unavailable)
         onSample?(SystemSample(timestamp: timestamp, cpu: cpu, memory: reader.memory(),
-                               pressure: resolvedPressure, pressureSource: origin))
+                               pressure: resolvedPressure, pressureSource: origin,
+                               temperature: temperatureReader.read(at: timestamp)))
         sampleApplications()
     }
 

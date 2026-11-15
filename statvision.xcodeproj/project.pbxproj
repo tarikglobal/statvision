@@ -6,6 +6,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1000000000000000000000F /* TemperatureMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000015; };
+		A10000000000000000000010 /* TemperatureReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000016; };
 		A1000000000000000000000C /* ApplicationMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012; };
 		A1000000000000000000000D /* ApplicationSampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013; };
 		A1000000000000000000000E /* ApplicationUsageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000014; };
@@ -33,6 +35,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		A20000000000000000000015 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemperatureMetrics.swift; sourceTree = "<group>"; };
+		A20000000000000000000016 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemperatureReader.swift; sourceTree = "<group>"; };
 		A20000000000000000000012 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationMetrics.swift; sourceTree = "<group>"; };
 		A20000000000000000000013 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationSampler.swift; sourceTree = "<group>"; };
 		A20000000000000000000014 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationUsageView.swift; sourceTree = "<group>"; };
@@ -73,8 +77,8 @@
 			sourceTree = "<group>";
 		};
 		A70000000000000000000003 = {isa = PBXGroup; children = (A20000000000000000000001, A20000000000000000000002, A20000000000000000000003); path = App; sourceTree = "<group>"; };
-		A70000000000000000000004 = {isa = PBXGroup; children = (A20000000000000000000004, A20000000000000000000005, A20000000000000000000012); path = Metrics; sourceTree = "<group>"; };
-		A70000000000000000000005 = {isa = PBXGroup; children = (A20000000000000000000006, A20000000000000000000013); path = System; sourceTree = "<group>"; };
+		A70000000000000000000004 = {isa = PBXGroup; children = (A20000000000000000000004, A20000000000000000000005, A20000000000000000000012, A20000000000000000000015); path = Metrics; sourceTree = "<group>"; };
+		A70000000000000000000005 = {isa = PBXGroup; children = (A20000000000000000000006, A20000000000000000000013, A20000000000000000000016); path = System; sourceTree = "<group>"; };
 		A70000000000000000000006 = {isa = PBXGroup; children = (A20000000000000000000007, A20000000000000000000008, A20000000000000000000009, A20000000000000000000014); path = Views; sourceTree = "<group>"; };
 		A70000000000000000000007 = {isa = PBXGroup; children = (A2000000000000000000000A, A2000000000000000000000B, A20000000000000000000011); path = Resources; sourceTree = "<group>"; };
 		A70000000000000000000008 = {isa = PBXGroup; children = (A2000000000000000000000C); path = statvisionTests; sourceTree = "<group>"; };
@@ -140,7 +144,7 @@
 		A80000000000000000000001 = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = (A10000000000000000000001, A10000000000000000000002, A10000000000000000000003, A10000000000000000000004, A10000000000000000000005, A10000000000000000000006, A10000000000000000000007, A10000000000000000000008, A10000000000000000000009, A1000000000000000000000C, A1000000000000000000000D, A1000000000000000000000E);
+			files = (A10000000000000000000001, A10000000000000000000002, A10000000000000000000003, A10000000000000000000004, A10000000000000000000005, A10000000000000000000006, A10000000000000000000007, A10000000000000000000008, A10000000000000000000009, A1000000000000000000000C, A1000000000000000000000D, A1000000000000000000000E, A1000000000000000000000F, A10000000000000000000010);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		A80000000000000000000002 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A1000000000000000000000A); runOnlyForDeploymentPostprocessing = 0; };

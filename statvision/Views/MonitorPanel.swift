@@ -58,6 +58,7 @@ struct MonitorPanel: View {
                     .opacity(store.latest?.memory == nil ? 0.35 : 1)
             }
             pressureIndicator
+            temperatureIndicator
             Divider()
             VStack(spacing: 12) {
                 HistoryChart(title: "CPU", samples: chartSamples, end: chartEnd,
@@ -140,6 +141,31 @@ struct MonitorPanel: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Bellek baskısı")
         .accessibilityValue("\(pressure.title). \(origin.explanation)")
+    }
+
+    private var temperatureIndicator: some View {
+        let reading = store.latest?.temperature
+        return HStack(spacing: 9) {
+            Image(systemName: "thermometer.medium").foregroundStyle(.orange)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Sıcaklık").font(.caption.weight(.medium))
+                Text(reading?.source.title ?? "Desteklenen sensör okunamadı")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text(reading?.text ?? "— °C")
+                .font(.system(.body, design: .rounded).weight(.semibold))
+                .monospacedDigit()
+        }
+        .padding(10)
+        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 9))
+        .help(reading.map { "Sensör: \($0.sensorName). Kasa veya ortam sıcaklığı değildir." }
+              ?? "Bu Mac veya macOS sürümünde sıcaklık sensörüne erişilemiyor.")
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Sıcaklık")
+        .accessibilityValue(reading.map { "\($0.text), \($0.source.title), \($0.sensorName)" }
+                            ?? "Sıcaklık sensörü kullanılamıyor")
     }
 }
 

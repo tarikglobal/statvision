@@ -268,6 +268,72 @@ final class ApplicationUsageTests: XCTestCase {
     }
 }
 
+final class TemperatureSelectionTests: XCTestCase {
+    func testChoosesChipHotspotAcrossPMUsInsteadOfOtherSensorTypes() throws {
+        let result = try XCTUnwrap(TemperatureSelection.reading(from: [
+            TemperatureSensorValue(name: "PMU tdie1", celsius: 42),
+            TemperatureSensorValue(name: "PMU2 tdie8", celsius: 56.5),
+            TemperatureSensorValue(name: "PMU tcal", celsius: 80),
+            TemperatureSensorValue(name: "gas gauge battery", celsius: 90)
+        ]))
+        XCTAssertEqual(result.celsius, 56.5)
+        XCTAssertEqual(result.sensorName, "PMU2 tdie8")
+        XCTAssertEqual(result.source, .chipHotspot)
+    }
+
+    func testCalibratedPMUFallbackIsLabelledSeparately() throws {
+        let result = try XCTUnwrap(TemperatureSelection.reading(from: [
+            TemperatureSensorValue(name: "PMU tcal", celsius: 38),
+            TemperatureSensorValue(name: "PMU2 tcal", celsius: 40)
+        ]))
+        XCTAssertEqual(result.celsius, 40)
+        XCTAssertEqual(result.source, .calibratedPMU)
+        XCTAssertEqual(result.source.title, "PMU sıcaklık sensörü")
+    }
+
+    func testInvalidTemperaturesAreUnavailableRatherThanClamped() {
+        for value in [0.0, -10, 150, 1000, .nan, .infinity, -.infinity] {
+            XCTAssertNil(TemperatureSelection.reading(from: [
+                TemperatureSensorValue(name: "PMU tdie1", celsius: value)
+            ]))
+        }
+    }
+
+    func testBatteryAmbientAndUnidentifiedSensorsAreNotChipReadings() {
+        let samples = ["gas gauge battery", "Ambient", "PMU tdev1", "Unknown", "PMU tdie1 extra"]
+            .map { TemperatureSensorValue(name: $0, celsius: 45) }
+        XCTAssertNil(TemperatureSelection.reading(from: samples))
+        XCTAssertNil(TemperatureSelection.reading(from: []))
+    }
+
+    func testInvalidChipReadingsDoNotHideValidFallback() throws {
+        let result = try XCTUnwrap(TemperatureSelection.reading(from: [
+            TemperatureSensorValue(name: "PMU tdie1", celsius: .nan),
+            TemperatureSensorValue(name: "PMU tcal", celsius: 37.25)
+        ]))
+        XCTAssertEqual(result.source, .calibratedPMU)
+        XCTAssertEqual(result.celsius, 37.25)
+    }
+
+    func testTiedSensorsHaveDeterministicSourceNames() throws {
+        let result = try XCTUnwrap(TemperatureSelection.reading(from: [
+            TemperatureSensorValue(name: "PMU tdie2", celsius: 50),
+            TemperatureSensorValue(name: "PMU tdie1", celsius: 50)
+        ]))
+        XCTAssertEqual(result.sensorName, "PMU tdie1")
+    }
+
+    func testMissingReadingDoesNotReusePriorTemperature() {
+        XCTAssertNotNil(TemperatureSelection.reading(from: [
+            TemperatureSensorValue(name: "PMU tdie1", celsius: 50)
+        ]))
+        XCTAssertNil(TemperatureSelection.reading(from: []))
+        let sleeping = SystemSample(timestamp: 10, cpu: CPUReading(percentage: nil, status: .sleeping),
+                                    memory: nil, pressure: .unavailable, pressureSource: .unavailable)
+        XCTAssertNil(sleeping.temperature)
+    }
+}
+
 final class HistoryAndPressureTests: XCTestCase {
     private func sample(at timestamp: Double, missing: Bool = false) -> SystemSample {
         SystemSample(timestamp: timestamp,
