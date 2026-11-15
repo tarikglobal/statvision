@@ -16,12 +16,51 @@ struct ProcessResourceSample {
     let timestamp: TimeInterval
 }
 
+struct ProcessIdentity: Equatable, Hashable {
+    let pid: Int32
+    let startTime: UInt64
+}
+
 struct ApplicationUsage: Identifiable, Equatable {
     let id: String
     let name: String
     let cpuPercentage: Double?
     let memoryBytes: UInt64?
     let processCount: Int
+    let processes: [ProcessIdentity]
+
+    init(id: String, name: String, cpuPercentage: Double?, memoryBytes: UInt64?,
+         processCount: Int, processes: [ProcessIdentity] = []) {
+        self.id = id
+        self.name = name
+        self.cpuPercentage = cpuPercentage
+        self.memoryBytes = memoryBytes
+        self.processCount = processCount
+        self.processes = processes
+    }
+}
+
+enum ApplicationTerminationPolicy {
+    static func disabledReason(bundleIdentifier: String?, bundlePath: String,
+                               isOwnApplication: Bool, isProhibited: Bool) -> String? {
+        if isOwnApplication { return "statvision’ı kapatmak için Çıkış düğmesini kullanın." }
+        guard let identifier = bundleIdentifier, !identifier.isEmpty else {
+            return "Uygulama kimliği doğrulanamadı."
+        }
+        let protected: Set<String> = ["com.apple.finder", "com.apple.dock", "com.apple.loginwindow",
+            "com.apple.controlcenter", "com.apple.systemuiserver", "com.apple.windowmanager",
+            "com.apple.notificationcenterui", "com.apple.securityagent"]
+        if isProhibited || protected.contains(identifier.lowercased())
+            || bundlePath.hasPrefix("/System/Library/") {
+            return "Bu sistem uygulaması buradan kapatılamaz."
+        }
+        return nil
+    }
+
+    static func matchesObservedProcess(_ current: ProcessIdentity?, observed: [ProcessIdentity]) -> Bool {
+        guard let current, current.pid > 0, current.startTime > 0 else { return false }
+        return observed.contains(current)
+    }
 }
 
 enum ApplicationRanking: String, CaseIterable, Identifiable {
@@ -85,7 +124,9 @@ struct ApplicationUsageCalculator {
             }
             return ApplicationUsage(id: id, name: processes[0].appName,
                                     cpuPercentage: cpu.map { min(100, max(0, $0)) },
-                                    memoryBytes: memory, processCount: processes.count)
+                                    memoryBytes: memory, processCount: processes.count,
+                                    processes: processes.map { ProcessIdentity(pid: $0.pid, startTime: $0.startTime) }
+                                        .sorted { $0.pid < $1.pid })
         }
         return ApplicationUsageSnapshot(applications: applications,
                                         unreadableProcesses: unreadableProcesses)

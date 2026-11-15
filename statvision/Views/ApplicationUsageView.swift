@@ -3,6 +3,9 @@ import SwiftUI
 struct ApplicationUsageView: View {
     let snapshot: ApplicationUsageSnapshot?
     let hasSample: Bool
+    let disabledReason: (ApplicationUsage) -> String?
+    let closeApplication: (ApplicationUsage) -> Void
+    let terminationMessage: String?
     @State private var ranking: ApplicationRanking = .cpu
 
     var body: some View {
@@ -27,17 +30,32 @@ struct ApplicationUsageView: View {
                             HStack(spacing: 7) {
                                 Text("\(index + 1)").foregroundStyle(.secondary)
                                     .frame(width: 12, alignment: .leading)
-                                Text(app.name).lineLimit(1).truncationMode(.tail)
-                                Spacer(minLength: 8)
-                                Text(value(for: app)).monospacedDigit()
-                                    .foregroundStyle(ranking == .cpu ? Color.blue : Color.teal)
+                                HStack(spacing: 7) {
+                                    Text(app.name).lineLimit(1).truncationMode(.tail)
+                                    Spacer(minLength: 8)
+                                    Text(value(for: app)).monospacedDigit()
+                                        .foregroundStyle(ranking == .cpu ? Color.blue : Color.teal)
+                                }
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityLabel("\(index + 1). \(app.name)")
+                                .accessibilityValue("\(ranking.rawValue) \(value(for: app)), \(app.processCount) işlem")
+                                .help("\(app.name) · \(app.processCount) işlem")
+                                Button { closeApplication(app) } label: {
+                                    Image(systemName: "xmark.circle")
+                                        .font(.system(size: 13))
+                                        .frame(width: 22, height: 22)
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.borderless)
+                                .foregroundStyle(.secondary)
+                                .disabled(disabledReason(app) != nil)
+                                .help(disabledReason(app) ?? "\(app.name) uygulamasını kapat")
+                                .accessibilityLabel("\(app.name) uygulamasını kapat")
+                                .accessibilityHint(disabledReason(app) ?? "Uygulamaya normal kapatma isteği gönderir")
                             }
                             .font(.caption)
-                            .frame(height: 18)
-                            .help("\(app.name) · \(app.processCount) işlem")
-                            .accessibilityElement(children: .ignore)
-                            .accessibilityLabel("\(index + 1). \(app.name)")
-                            .accessibilityValue("\(ranking.rawValue) \(value(for: app)), \(app.processCount) işlem")
+                            .frame(height: 22)
+                            .accessibilityElement(children: .contain)
                         }
                     }
                 } else {
@@ -46,7 +64,12 @@ struct ApplicationUsageView: View {
                         .frame(maxWidth: .infinity, minHeight: 110)
                 }
             }
-            .frame(minHeight: 118, alignment: .top)
+            .frame(minHeight: 138, alignment: .top)
+            if let terminationMessage {
+                Text(terminationMessage).font(.caption2).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityLabel("Kapatma durumu: \(terminationMessage)")
+            }
             Text((snapshot?.unreadableProcesses ?? 0) > 0
                  ? "Bazı işlemler okunamadı; liste eksik olabilir."
                  : "Yardımcı işlemler dahil · CPU: toplam kapasite %100")

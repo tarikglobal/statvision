@@ -27,6 +27,7 @@ statvision/
     StatvisionApp.swift
     AppDelegate.swift
     MonitoringStore.swift
+    ApplicationTerminator.swift
   Metrics/
     MetricModels.swift
     MetricCalculations.swift
@@ -123,6 +124,14 @@ RAM doluluğu üzerinden eşik veya tahmin **yapılmaz**. Önce salt okunur `sys
 
 Bu üç seviyeli gösterge, Etkinlik Monitörü’nün sürekli bellek baskısı grafiğinin yeniden üretimi değildir.
 
+### Listeden uygulama kapatma
+
+İlk 5 listesindeki **×** düğmesi, satırdaki uygulamanın gözlemlenen ana örneklerine `NSRunningApplication.terminate()` ile normal kapatma isteği gönderir. Yardımcı işlemlere tek tek sinyal gönderilmez; onların yaşam döngüsünü kendi uygulaması yönetir. Uygulama, kaydedilmemiş belgeler için kendi kaydetme uyarısını gösterebilir veya kapatmayı iptal edebilir. Kilitlenen uygulamalarda zorla kapatmaya otomatik geçiş yoktur. [Apple terminate açıklaması](https://developer.apple.com/documentation/appkit/nsrunningapplication/terminate()).
+
+Bir isteğin kabul edilmesi uygulamanın çıktığı anlamına gelmez. Panel isteğin gönderildiğini belirtir; sekiz saniye sonra hedef örneklerin gerçekten çıkıp çıkmadığı kontrol edilir. Uygulama hâlâ açıksa kendi penceresini kontrol etme mesajı gösterilir. Gerçek ölçümde biten uygulamalar bir sonraki liste yenilemesinde kaybolur. Bekleyen istek için düğme geçici olarak pasiftir.
+
+Kapatmadan hemen önce PID ve `ri_proc_start_abstime` birlikte doğrulanır; eski bir satır üzerinden PID'si yeniden kullanılmış yeni bir süreç hedeflenmez. Finder, Dock, oturum ve sistem arayüzü uygulamaları, `/System/Library/` altındaki servisler ve statvision bu düğmeden kapatılamaz. Statvision için kendi **Çıkış** düğmesi kullanılır. Ana uygulama ölçülemiyorsa veya kimliği doğrulanamıyorsa × pasif kalır ve açıklama sunar. Yönetici yetkisi veya ek izin istenmez.
+
 ### Sıcaklık
 
 Menü çubuğunda CPU ve RAM'in yanında **°C**, panelde **Sıcaklık** satırı bulunur. Apple Silicon'da IOKit'in IOHID sıcaklık servisleri salt okunur biçimde sorgulanır. `PMU… tdie…` adlarıyla sunulan geçerli çip sensörlerinin en yükseği gösterilir: bu tek bir CPU çekirdeğinin ortalaması, kasa yüzeyi veya ortam sıcaklığı değildir. Çip sensörü yoksa `PMU… tcal` sensörü kullanılır ve panelde **PMU sıcaklık sensörü** olarak ayrıca belirtilir. Pil, `tdev` veya kaynağı belirlenemeyen sensörler çip sıcaklığı diye gösterilmez.
@@ -162,12 +171,12 @@ Panel veya ilk 5 uygulama bölümü kapandığında uygulama taraması ve işlem
 - Yerel AppKit düğmesi ve SwiftUI kontrolleri, VoiceOver etiketleri ve okunabilir değerler içerir. Grafikler son/en düşük/en yüksek yüzde özeti sunar.
 - Panel açıkken **⌘,** ayarları açar, **⌘Q** çıkar, **Escape** paneli kapatır. Ayarlar penceresinde Escape pencereyi kapatır. macOS Klavye ile Gezinme açıkken Tab/Shift-Tab, odaklanmış düğmede Space/Return kullanılabilir. Menü çubuğuna macOS’un Control-F8 kısayoluyla ulaşılabilir; klavyeye göre Fn gerekebilir.
 - Baskı durumları hem yazı hem simgeyle belirtilir. Yerel renkler açık/koyu görünümü izler; grafik çizgileri yüksek kontrast tercihinde kalınlaşır.
-- Ağ bağlantısı, alt süreç başlatma veya işlem sonlandırma yoktur. İşlem taraması yalnızca panel ve uygulama bölümü açıkken çalışır. Yönetici yetkisi istenmez. Uygulama başlangıç öğesi kaydetmez.
+- Ağ bağlantısı veya alt süreç başlatma yoktur. Listede kullanıcı tıklamasıyla normal uygulama kapatma isteği gönderilebilir; zorla sonlandırma yapılmaz. İşlem taraması yalnızca panel ve uygulama bölümü açıkken çalışır. Yönetici yetkisi istenmez. Uygulama başlangıç öğesi kaydetmez.
 - Geçmiş varsayılan aralıkta yaklaşık 31, 1 saniyede en fazla 61 örnektir. CPU ve RAM sürekli ölçülür; panel kapalıyken grafik çizimi yoktur. Sabit bir pil/CPU tüketimi iddiası yapılmaz; donanım üzerinde Instruments ile ölçülmelidir.
 
 ## Testler ve doğrulama
 
-39 XCTest, gerçek sistemden bağımsız kontrollü sayaç girdileriyle hesaplamaları denetler. Uygulama çalışma zamanında bu test girdilerini veya rastgele veri kullanmaz. Uygulama sıralaması testleri yardımcı işlem toplamlarını, Apple Silicon zaman dönüşümünü, PID yeniden kullanımını, panel kapanışındaki taban sıfırlamayı ve iki ayrı ilk 5 sıralamasını da kapsar. Sıcaklık testleri çip sensörü önceliğini, PMU yedeğini, pil/ortam ayrımını, geçersiz değerleri ve eksik ölçümleri denetler. Menü çubuğu testleri sekiz gösterge kombinasyonunu, tüm değerler gizliyken erişilebilir kimliği ve eksik ölçüm gösterimini kapsar.
+45 XCTest, gerçek sistemden bağımsız kontrollü sayaç girdileriyle hesaplamaları denetler. Uygulama çalışma zamanında bu test girdilerini veya rastgele veri kullanmaz. Uygulama sıralaması testleri yardımcı işlem toplamlarını, Apple Silicon zaman dönüşümünü, PID yeniden kullanımını, panel kapanışındaki taban sıfırlamayı ve iki ayrı ilk 5 sıralamasını da kapsar. Sıcaklık testleri çip sensörü önceliğini, PMU yedeğini, pil/ortam ayrımını, geçersiz değerleri ve eksik ölçümleri denetler. Menü çubuğu testleri sekiz gösterge kombinasyonunu, tüm değerler gizliyken erişilebilir kimliği ve eksik ölçüm gösterimini kapsar. Kapatma testleri sistem uygulamalarının korunmasını, normal Apple uygulamalarına izin verilmesini, statvision için ayrı çıkış yolunu ve PID/başlangıç zamanı eşlemesini kapsar.
 
 Kapsam: ilk CPU örneği; lifetime yerine delta; nice sayacı; 0/100 sınırları; çok çekirdek normalizasyonu; sıfır fark; sayaç sıfırlanması/32 bit taşma; uzun boşluk/uyku; geçersiz zaman; fiziksel sıkıştırma; dosya önbelleği ayrımı; çalışma zamanı sayfa boyutu; çıkarma/çarpma/toplama taşmaları; GB birimi; 1/2/5 saniyede ve değişen aralıklarda gerçek 60 saniye; eksik geçmiş; bildirilmemiş baskı değerleri.
 
@@ -191,7 +200,7 @@ Proje dosya başvurularını, kaynak hedef üyeliklerini, paylaşılan şemayı 
 ruby scripts/validate_project.rb
 ```
 
-**Son doğrulama — 15 Kasım 2026:** Apple Silicon üzerinde Xcode 27.2 ile Debug ve Apple Silicon + Intel Release uygulama derlemeleri başarılı. `swift test` ve Xcode test hedefinde ayrı ayrı **39 test, 0 hata**. Proje başvuruları, hedef üyelikleri, paylaşılan şema ve plist denetimleri geçti. Release paketinin iki mimarisi ve yerel imza bütünlüğü doğrulandı. Masaüstüne kurulan sürümde ok düğmesiyle uygulama listesini açma/kapatma ve CPU/RAM/sıcaklık anahtarlarını bağımsız değiştirme denendi. Sıcaklık normal kullanıcı yetkileriyle gerçek çip sensöründen okundu; bağlantı sıfırlanıp yeniden okuma denendi ve masaüstüne kurulan uygulamanın sıcaklık satırında gerçek °C değeri görüldü. Önceki doğrulamada iki ayrı ilk 5 uygulama listesi, yardımcı işlem toplamları, açık/koyu panel çizimi ve panel kapanınca sonuçların bırakılması kontrol edildi; tek çekirdekte kontrollü yoğun iş yüküyle Mach zaman dönüşümü doğrulandı (bir çekirdek ölçeğinde yaklaşık %100). VoiceOver, pil tüketimi ve gerçek cihaz uyku/uyanma davranışı ayrıca doğrulanmalıdır. Intel donanımında ve minimum macOS 13 üzerinde çalışma ayrıca denenmedi.
+**Son doğrulama — 15 Kasım 2026:** Apple Silicon üzerinde Xcode 27.2 ile Debug ve Apple Silicon + Intel Release uygulama derlemeleri başarılı. `swift test` ve Xcode test hedefinde ayrı ayrı **45 test, 0 hata**. Proje başvuruları, hedef üyelikleri, paylaşılan şema ve plist denetimleri geçti. Release paketinin iki mimarisi ve yerel imza bütünlüğü doğrulandı. Ayrı bir yerel test uygulamasıyla × düğmesi denendi: ilk kapatma isteği uygulama tarafından iptal edildi ve uygulama açık kaldı; ikinci istekte normal çıkış geri çağrısı çalıştı ve satır listeden kaldırıldı. Kullanıcının açık uygulamaları bu testte kapatılmadı. Masaüstüne kurulan sürümde ok düğmesiyle uygulama listesini açma/kapatma ve CPU/RAM/sıcaklık anahtarlarını bağımsız değiştirme denendi. Sıcaklık normal kullanıcı yetkileriyle gerçek çip sensöründen okundu; bağlantı sıfırlanıp yeniden okuma denendi ve masaüstüne kurulan uygulamanın sıcaklık satırında gerçek °C değeri görüldü. Önceki doğrulamada iki ayrı ilk 5 uygulama listesi, yardımcı işlem toplamları, açık/koyu panel çizimi ve panel kapanınca sonuçların bırakılması kontrol edildi; tek çekirdekte kontrollü yoğun iş yüküyle Mach zaman dönüşümü doğrulandı (bir çekirdek ölçeğinde yaklaşık %100). VoiceOver, pil tüketimi ve gerçek cihaz uyku/uyanma davranışı ayrıca doğrulanmalıdır. Intel donanımında ve minimum macOS 13 üzerinde çalışma ayrıca denenmedi.
 
 Önerilen kısa cihaz kontrolü: önce boşta CPU/RAM’i gözleyin; ardından normal bir iş yüküyle Etkinlik Monitörü’nün toplam CPU değerini karşılaştırın. Yenileme aralığını değiştirin, paneli kapatıp menü değerlerinin devam ettiğini kontrol edin, Mac’i uyutup uyandırın. İlk CPU değerinin yeniden beklendiğini ve uyku boşluğunun çizilmediğini doğrulayın. Sistem/Açık/Koyu görünümü ve klavye kısayollarını deneyin.
 

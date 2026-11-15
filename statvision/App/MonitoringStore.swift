@@ -27,6 +27,8 @@ final class MonitoringStore: ObservableObject {
     @Published private(set) var history = SampleHistory()
     @Published private(set) var applicationUsage: ApplicationUsageSnapshot?
     @Published private(set) var hasApplicationSample = false
+    @Published private(set) var closingApplications = Set<String>()
+    @Published private(set) var terminationMessage: String?
     @Published var applicationsExpanded: Bool {
         didSet {
             guard applicationsExpanded != oldValue else { return }
@@ -57,6 +59,39 @@ final class MonitoringStore: ObservableObject {
     private var isSleeping = false
     private var applicationSession: UUID?
     private var isPanelOpen = false
+    private let terminator = ApplicationTerminator()
+    private var terminationChecks: [String: Task<Void, Never>] = [:]
+
+    func terminationDisabledReason(for usage: ApplicationUsage) -> String? {
+        if closingApplications.contains(usage.id) { return "Kapatma isteği gönderildi; uygulama bekleniyor." }
+        return terminator.disabledReason(for: usage)
+    }
+
+    func closeApplication(_ usage: ApplicationUsage) {
+        guard terminationDisabledReason(for: usage) == nil else { return }
+        let outcome = terminator.requestTermination(of: usage)
+        guard !outcome.targets.isEmpty else {
+            terminationMessage = "\(usage.name) kapatılamadı. Uygulama değişmiş veya isteği reddetmiş olabilir."
+            return
+        }
+        closingApplications.insert(usage.id)
+        terminationMessage = outcome.rejectedCount == 0
+            ? "\(usage.name) için kapatma isteği gönderildi."
+            : "\(usage.name): bazı uygulama örnekleri kapatılamadı."
+        // A successful send is not proof of exit: the app can show a save
+        // dialog, cancel quitting, or remain unresponsive. Check once later.
+        terminationChecks[usage.id] = Task { [weak self] in
+            do { try await Task.sleep(nanoseconds: 8_000_000_000) } catch { return }
+            guard let self else { return }
+            self.closingApplications.remove(usage.id)
+            self.terminationChecks[usage.id] = nil
+            if outcome.targets.allSatisfy(\.isTerminated), outcome.rejectedCount == 0 {
+                self.terminationMessage = "\(usage.name) kapatıldı."
+            } else {
+                self.terminationMessage = "\(usage.name) hâlâ açık olabilir. Kaydetme uyarısı için uygulamanın penceresini kontrol edin."
+            }
+        }
+    }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -117,7 +152,11 @@ final class MonitoringStore: ObservableObject {
     func start() { sampler.start(interval: Double(refreshInterval)) }
     func sleep() { isSleeping = true; sampler.pauseForSleep() }
     func wake() { isSleeping = false; sampler.start(interval: Double(refreshInterval)) }
-    func stop() { sampler.stop() }
+    func stop() {
+        sampler.stop()
+        terminationChecks.values.forEach { $0.cancel() }
+        terminationChecks.removeAll()
+    }
 
     var cpuText: String {
         guard let percentage = latest?.cpu.percentage else { return "—" }

@@ -11,6 +11,8 @@ Panelin altındaki **En çok tüketen 5 uygulama** başlığının yanındaki ok
 
 Panelin altındaki **Ayarlar** düğmesinden **Menü çubuğunda göster** seçeneklerine ulaşabilirsiniz. **CPU kullanımı**, **RAM kullanımı** ve **Sıcaklık** bağımsız olarak açılıp kapatılır; seçim anında uygulanır ve sonraki açılışta korunur. Üçünü de kapatırsanız paneli açabilmeniz için menü çubuğunda statvision simgesi kalır. Bu seçenekler ana paneldeki ölçümleri gizlemez.
 
+Listedeki bir uygulamayı kapatmak için satırın sağındaki **×** düğmesine tıklayın. Uygulamaya normal kapatma isteği gönderilir; kaydetme uyarısı varsa uygulamanın kendi penceresinde yanıtlayın. Kapatmayı iptal ederseniz uygulama açık kalır. Yanıt vermeyen uygulamalar otomatik olarak zorla kapatılmaz. Finder gibi sistem uygulamalarında ve statvision'ın kendi satırında × pasiftir; üzerine gelince açıklaması görünür.
+
 Uygulama menü çubuğunda çalışır; Dock’ta ayrı bir simge tutmaz. Finder `.app` paketini tek bir uygulama simgesi olarak gösterir. İçindeki dosyaları ayrı ayrı açmanız gerekmez.
 
 Menü çubuğunda CPU ve RAM'in yanındaki **°C** değeri sıcaklığı gösterir. Panelde **Sıcaklık** satırında ölçüm kaynağı belirtilir. Bu Mac'te en sıcak geçerli çip sensörü kullanılır; kasa yüzeyi veya ortam sıcaklığı değildir. Desteklenen sensör okunamıyorsa **— °C** görünür. Değer, Ayarlar'da seçilen 1/2/5 saniyelik ölçüm aralığıyla yenilenir.

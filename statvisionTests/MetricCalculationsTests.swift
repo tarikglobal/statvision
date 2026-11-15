@@ -375,6 +375,62 @@ final class MenuBarPresentationTests: XCTestCase {
     }
 }
 
+final class ApplicationTerminationPolicyTests: XCTestCase {
+    private func reason(_ identifier: String? = "com.example.Editor", path: String = "/Applications/Editor.app",
+                        own: Bool = false, prohibited: Bool = false) -> String? {
+        ApplicationTerminationPolicy.disabledReason(bundleIdentifier: identifier, bundlePath: path,
+                                                     isOwnApplication: own, isProhibited: prohibited)
+    }
+
+    func testFinderAndSessionInfrastructureCannotBeClosed() {
+        for identifier in ["com.apple.finder", "com.apple.dock", "com.apple.loginwindow",
+                           "com.apple.controlcenter", "com.apple.SystemUIServer",
+                           "com.apple.WindowManager", "com.apple.notificationcenterui",
+                           "com.apple.SecurityAgent"] {
+            XCTAssertNotNil(reason(identifier))
+        }
+    }
+
+    func testSystemLocationIsProtectedButNormalAppleApplicationsAreAllowed() {
+        XCTAssertNotNil(reason("com.example.Service", path: "/System/Library/CoreServices/Service.app"))
+        XCTAssertNil(reason("com.apple.AppStore", path: "/System/Applications/App Store.app"))
+        XCTAssertNil(reason("com.apple.iWork.Pages", path: "/Applications/Pages.app"))
+        XCTAssertNil(reason(path: "/Applications/System/Library/Editor.app"))
+    }
+
+    func testMonitorUsesItsSeparateExitButton() {
+        XCTAssertNotNil(reason("com.statvision.mac", own: true))
+    }
+
+    func testUnknownAndNoninteractiveApplicationsAreUnavailable() {
+        XCTAssertNotNil(reason(nil))
+        XCTAssertNotNil(reason(""))
+        XCTAssertNotNil(reason(prohibited: true))
+        XCTAssertNil(reason())
+    }
+
+    func testReusedPIDAndUnavailableIdentityCannotTargetANewProcess() {
+        let observed = [ProcessIdentity(pid: 42, startTime: 100)]
+        XCTAssertTrue(ApplicationTerminationPolicy.matchesObservedProcess(observed[0], observed: observed))
+        for current in [nil, ProcessIdentity(pid: 42, startTime: 200),
+                        ProcessIdentity(pid: 43, startTime: 100), ProcessIdentity(pid: 0, startTime: 100),
+                        ProcessIdentity(pid: 42, startTime: 0)] {
+            XCTAssertFalse(ApplicationTerminationPolicy.matchesObservedProcess(current, observed: observed))
+        }
+    }
+
+    func testApplicationAggregationRetainsMeasuredProcessBirthTimes() throws {
+        var calculator = ApplicationUsageCalculator()
+        let samples = [ProcessResourceSample(pid: 20, startTime: 200, appID: "/Editor.app", appName: "Editor",
+                                            cpuTicks: 0, memoryBytes: 100, timestamp: 1),
+                       ProcessResourceSample(pid: 10, startTime: 100, appID: "/Editor.app", appName: "Editor",
+                                            cpuTicks: 0, memoryBytes: 100, timestamp: 1)]
+        let result = calculator.consume(samples, secondsPerTick: 1, processorCount: 8, maximumGap: 15)
+        XCTAssertEqual(try XCTUnwrap(result.applications.first).processes,
+                       [ProcessIdentity(pid: 10, startTime: 100), ProcessIdentity(pid: 20, startTime: 200)])
+    }
+}
+
 final class HistoryAndPressureTests: XCTestCase {
     private func sample(at timestamp: Double, missing: Bool = false) -> SystemSample {
         SystemSample(timestamp: timestamp,

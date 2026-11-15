@@ -78,7 +78,10 @@ struct MonitorPanel: View {
             Divider()
             DisclosureGroup(isExpanded: $store.applicationsExpanded) {
                 ApplicationUsageView(snapshot: store.applicationUsage,
-                                     hasSample: store.hasApplicationSample)
+                                     hasSample: store.hasApplicationSample,
+                                     disabledReason: store.terminationDisabledReason,
+                                     closeApplication: store.closeApplication,
+                                     terminationMessage: store.terminationMessage)
                     .padding(.top, 8)
             } label: {
                 Text("En çok tüketen 5 uygulama").font(.caption.weight(.semibold))
