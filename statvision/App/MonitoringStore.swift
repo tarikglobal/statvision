@@ -27,6 +27,20 @@ final class MonitoringStore: ObservableObject {
     @Published private(set) var history = SampleHistory()
     @Published private(set) var applicationUsage: ApplicationUsageSnapshot?
     @Published private(set) var hasApplicationSample = false
+    @Published var applicationsExpanded: Bool {
+        didSet {
+            guard applicationsExpanded != oldValue else { return }
+            defaults.set(applicationsExpanded, forKey: "applicationsExpanded")
+            updateApplicationSession()
+        }
+    }
+    @Published var menuBarVisibility: MenuBarVisibility {
+        didSet {
+            defaults.set(menuBarVisibility.showCPU, forKey: "menuBarShowCPU")
+            defaults.set(menuBarVisibility.showMemory, forKey: "menuBarShowMemory")
+            defaults.set(menuBarVisibility.showTemperature, forKey: "menuBarShowTemperature")
+        }
+    }
     @Published var refreshInterval: Int {
         didSet {
             guard refreshInterval != oldValue else { return }
@@ -42,9 +56,15 @@ final class MonitoringStore: ObservableObject {
     private let sampler = SystemSampler()
     private var isSleeping = false
     private var applicationSession: UUID?
+    private var isPanelOpen = false
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        applicationsExpanded = defaults.object(forKey: "applicationsExpanded") as? Bool ?? false
+        menuBarVisibility = MenuBarVisibility(
+            showCPU: defaults.object(forKey: "menuBarShowCPU") as? Bool ?? true,
+            showMemory: defaults.object(forKey: "menuBarShowMemory") as? Bool ?? true,
+            showTemperature: defaults.object(forKey: "menuBarShowTemperature") as? Bool ?? true)
         let storedInterval = defaults.integer(forKey: "refreshInterval")
         refreshInterval = [1, 2, 5].contains(storedInterval) ? storedInterval : 2
         appearance = AppearancePreference(rawValue: defaults.string(forKey: "appearance") ?? "") ?? .system
@@ -66,7 +86,15 @@ final class MonitoringStore: ObservableObject {
     }
 
     func setPanelOpen(_ open: Bool) {
-        applicationSession = open ? UUID() : nil
+        guard isPanelOpen != open else { return }
+        isPanelOpen = open
+        updateApplicationSession()
+    }
+
+    private func updateApplicationSession() {
+        let shouldSample = isPanelOpen && applicationsExpanded
+        guard shouldSample != (applicationSession != nil) else { return }
+        applicationSession = shouldSample ? UUID() : nil
         applicationUsage = nil
         hasApplicationSample = false
         updateApplicationDescriptors()

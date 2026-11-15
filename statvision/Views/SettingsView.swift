@@ -10,6 +10,17 @@ struct SettingsView: View {
                 Image(systemName: "slider.horizontal.3").foregroundStyle(.tint)
                 Text("statvision Ayarları").font(.headline)
             }
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Menü çubuğunda göster").font(.headline)
+                Toggle("CPU kullanımı", isOn: $store.menuBarVisibility.showCPU)
+                Toggle("RAM kullanımı", isOn: $store.menuBarVisibility.showMemory)
+                Toggle("Sıcaklık", isOn: $store.menuBarVisibility.showTemperature)
+                Text("Tümünü kapatırsan menü çubuğunda yalnızca statvision simgesi görünür.")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .toggleStyle(.switch)
+            Divider()
             Form {
                 Picker("Yenileme aralığı", selection: $store.refreshInterval) {
                     Text("1 saniye").tag(1)

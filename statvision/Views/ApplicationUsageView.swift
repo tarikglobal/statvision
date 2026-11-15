@@ -7,7 +7,6 @@ struct ApplicationUsageView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text("En çok tüketen 5 uygulama").font(.caption.weight(.semibold))
             Picker("Sıralama", selection: $ranking) {
                 ForEach(ApplicationRanking.allCases) { Text($0.rawValue).tag($0) }
             }

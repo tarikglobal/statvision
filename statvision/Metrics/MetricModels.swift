@@ -109,6 +109,50 @@ struct SystemSample: Equatable {
     }
 }
 
+struct MenuBarVisibility: Equatable {
+    var showCPU = true
+    var showMemory = true
+    var showTemperature = true
+}
+
+struct MenuBarPresentation {
+    let title: String
+    let accessibilityValue: String
+    let toolTip: String
+
+    static func make(sample: SystemSample?, visibility: MenuBarVisibility) -> MenuBarPresentation {
+        var titles: [String] = []
+        var descriptions: [String] = []
+        if visibility.showCPU {
+            let cpu = sample?.cpu.percentage.map {
+                $0.formatted(.number.precision(.fractionLength(0))) + "%"
+            } ?? "—"
+            titles.append("CPU \(cpu)")
+            descriptions.append("CPU \(cpu)")
+        }
+        if visibility.showMemory {
+            let memory = sample?.memory.map {
+                $0.usedGB.formatted(.number.precision(.fractionLength(1))) + " GB"
+            } ?? "—"
+            titles.append("RAM \(memory)")
+            descriptions.append("Kullanılan RAM \(memory)")
+        }
+        if visibility.showTemperature {
+            let temperature = sample?.temperature?.text ?? "— °C"
+            titles.append(temperature)
+            descriptions.append("Sıcaklık \(temperature)")
+        }
+        var toolTip = (["statvision"] + titles).joined(separator: " · ")
+        if visibility.showTemperature {
+            toolTip += "\n" + (sample?.temperature.map { "\($0.source.title) · \($0.sensorName)" }
+                ?? "Sıcaklık sensörü kullanılamıyor")
+        }
+        return MenuBarPresentation(title: titles.joined(separator: "  "),
+                                   accessibilityValue: descriptions.isEmpty ? "Sistem izleme" : descriptions.joined(separator: ", "),
+                                   toolTip: toolTip)
+    }
+}
+
 struct SampleHistory {
     static let duration: TimeInterval = 60
     private(set) var samples: [SystemSample] = []

@@ -334,6 +334,47 @@ final class TemperatureSelectionTests: XCTestCase {
     }
 }
 
+final class MenuBarPresentationTests: XCTestCase {
+    private var sample: SystemSample {
+        SystemSample(timestamp: 1, cpu: CPUReading(percentage: 25, status: .valid),
+                     memory: MemoryReading(usedBytes: 8_589_934_592, totalBytes: 17_179_869_184,
+                                           compressedBytes: 0, cachedBytes: 0),
+                     pressure: .normal, pressureSource: .systemSnapshot,
+                     temperature: TemperatureReading(celsius: 45, source: .chipHotspot,
+                                                     sensorName: "PMU tdie1"))
+    }
+
+    func testAllEightVisibilityCombinationsHideOnlySelectedMetrics() {
+        for mask in 0..<8 {
+            let visibility = MenuBarVisibility(showCPU: mask & 1 != 0,
+                                              showMemory: mask & 2 != 0,
+                                              showTemperature: mask & 4 != 0)
+            let presentation = MenuBarPresentation.make(sample: sample, visibility: visibility)
+            XCTAssertEqual(presentation.title.contains("CPU"), visibility.showCPU)
+            XCTAssertEqual(presentation.title.contains("RAM"), visibility.showMemory)
+            XCTAssertEqual(presentation.title.contains("°C"), visibility.showTemperature)
+            XCTAssertEqual(presentation.accessibilityValue.contains("CPU"), visibility.showCPU)
+            XCTAssertEqual(presentation.accessibilityValue.contains("RAM"), visibility.showMemory)
+            XCTAssertEqual(presentation.accessibilityValue.contains("Sıcaklık"), visibility.showTemperature)
+            XCTAssertEqual(presentation.toolTip.contains("PMU tdie1"), visibility.showTemperature)
+        }
+    }
+
+    func testAllHiddenLeavesAnAccessibleIdentityForTheIcon() {
+        let presentation = MenuBarPresentation.make(sample: sample,
+            visibility: MenuBarVisibility(showCPU: false, showMemory: false, showTemperature: false))
+        XCTAssertTrue(presentation.title.isEmpty)
+        XCTAssertEqual(presentation.toolTip, "statvision")
+        XCTAssertEqual(presentation.accessibilityValue, "Sistem izleme")
+    }
+
+    func testMissingMeasurementsRemainPlaceholdersForVisibleMetrics() {
+        let presentation = MenuBarPresentation.make(sample: nil, visibility: MenuBarVisibility())
+        XCTAssertEqual(presentation.title, "CPU —  RAM —  — °C")
+        XCTAssertTrue(presentation.toolTip.contains("Sıcaklık sensörü kullanılamıyor"))
+    }
+}
+
 final class HistoryAndPressureTests: XCTestCase {
     private func sample(at timestamp: Double, missing: Bool = false) -> SystemSample {
         SystemSample(timestamp: timestamp,

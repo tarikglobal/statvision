@@ -27,7 +27,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover.delegate = self
         popover.contentSize = NSSize(width: 336, height: 472)
 
-        store.$latest.sink { [weak self] sample in self?.updateStatus(sample) }
+        store.$latest.combineLatest(store.$menuBarVisibility)
+            .sink { [weak self] sample, visibility in self?.updateStatus(sample, visibility: visibility) }
             .store(in: &subscriptions)
         store.$appearance.sink { [weak self] preference in
             let appearance: NSAppearance?
@@ -59,19 +60,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         return false
     }
 
-    private func updateStatus(_ sample: SystemSample?) {
-        let cpu = sample?.cpu.percentage.map {
-            $0.formatted(.number.precision(.fractionLength(0))) + "%"
-        } ?? "—"
-        let ram = sample?.memory.map {
-            $0.usedGB.formatted(.number.precision(.fractionLength(1))) + " GB"
-        } ?? "—"
-        let temperature = sample?.temperature?.text ?? "— °C"
-        statusItem?.button?.title = "CPU \(cpu)  RAM \(ram)  \(temperature)"
-        statusItem?.button?.setAccessibilityValue("CPU \(cpu), kullanılan RAM \(ram), sıcaklık \(temperature)")
-        let source = sample?.temperature.map { "\($0.source.title) · \($0.sensorName)" }
-            ?? "Sıcaklık sensörü kullanılamıyor"
-        statusItem?.button?.toolTip = "statvision · CPU \(cpu) · RAM \(ram) · \(temperature)\n\(source)"
+    private func updateStatus(_ sample: SystemSample?, visibility: MenuBarVisibility) {
+        guard let button = statusItem?.button else { return }
+        let presentation = MenuBarPresentation.make(sample: sample, visibility: visibility)
+        button.title = presentation.title
+        // Keep the panel reachable when every numeric value is hidden.
+        button.image = presentation.title.isEmpty
+            ? NSImage(systemSymbolName: "waveform.path.ecg", accessibilityDescription: "statvision") : nil
+        button.setAccessibilityValue(presentation.accessibilityValue)
+        button.toolTip = presentation.toolTip
     }
 
     @objc private func togglePanel() {

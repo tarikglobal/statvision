@@ -5,12 +5,16 @@ struct MonitorPanel: View {
     @ObservedObject var store: MonitoringStore
     let openSettings: () -> Void
     let closePanel: () -> Void
+    @State private var contentHeight: CGFloat = 600
 
     var body: some View {
         ScrollView {
             panelContent
         }
-        .frame(width: 336, height: min(760, max(300, (NSScreen.main?.visibleFrame.height ?? 830) - 70)))
+        .frame(width: 336, height: min(contentHeight, max(300, (NSScreen.main?.visibleFrame.height ?? 830) - 70)))
+        .onPreferenceChange(PanelContentHeight.self) { height in
+            if height > 0, abs(contentHeight - height) > 1 { contentHeight = height }
+        }
         .background(.regularMaterial)
         .tint(.teal)
         .preferredColorScheme(store.appearance.colorScheme)
@@ -72,13 +76,19 @@ struct MonitorPanel: View {
                 .font(.caption2).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Divider()
-            ApplicationUsageView(snapshot: store.applicationUsage,
-                                 hasSample: store.hasApplicationSample)
+            DisclosureGroup(isExpanded: $store.applicationsExpanded) {
+                ApplicationUsageView(snapshot: store.applicationUsage,
+                                     hasSample: store.hasApplicationSample)
+                    .padding(.top, 8)
+            } label: {
+                Text("En çok tüketen 5 uygulama").font(.caption.weight(.semibold))
+            }
+            .accessibilityHint("CPU ve RAM uygulama listesini açar veya kapatır")
             Divider()
             HStack {
                 Button(action: openSettings) { Label("Ayarlar", systemImage: "gearshape") }
                     .keyboardShortcut(",", modifiers: .command)
-                    .accessibilityHint("Yenileme aralığını ve görünümü değiştirir")
+                    .accessibilityHint("Menü çubuğu göstergelerini, yenileme aralığını ve görünümü değiştirir")
                 Spacer()
                 Button("Çıkış", action: { NSApplication.shared.terminate(nil) })
                     .keyboardShortcut("q", modifiers: .command)
@@ -88,6 +98,9 @@ struct MonitorPanel: View {
         }
         .padding(16)
         .frame(width: 336)
+        .background(GeometryReader { geometry in
+            Color.clear.preference(key: PanelContentHeight.self, value: geometry.size.height)
+        })
     }
 
     private var chartEnd: TimeInterval { SampleClock.now }
@@ -167,6 +180,11 @@ struct MonitorPanel: View {
         .accessibilityValue(reading.map { "\($0.text), \($0.source.title), \($0.sensorName)" }
                             ?? "Sıcaklık sensörü kullanılamıyor")
     }
+}
+
+private struct PanelContentHeight: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 
 private extension MemoryPressure {

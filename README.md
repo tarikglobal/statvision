@@ -13,7 +13,8 @@ Hazır uygulamayı açmak ve başka Mac’lere göndermek için [kullanım ve pa
 - **Durum:** `MonitoringStore` değişmez ölçüm sonuçlarını ana kuyrukta yayımlar. Kullanıcı tercihleri `UserDefaults` içinde saklanır. Ölçümler diske kaydedilmez.
 - **Grafikler:** SwiftUI `Canvas`, zaman damgalı son 60 saniyeyi çizer. Ayrı çizim zamanlayıcısı ve animasyon yoktur. Panel kapanınca hosting controller kaldırılır; grafik görünümleri yaşamaz, ölçümler ve menü çubuğu devam eder.
 - **Saf hesaplamalar:** `Metrics` katmanı arayüzden ve Mach çağrılarından bağımsızdır; XCTest ve yerel Swift paketi ile test edilebilir.
-- **Uygulama sıralaması:** Panelin altındaki CPU/RAM sekmeleri ayrı ilk 5 listelerini gösterir. `libproc` okumaları aynı arka plan kuyruğunda, yalnızca panel açıkken yapılır. Küçük ekranlarda panel kaydırılabilir.
+- **Uygulama sıralaması:** Panelin altındaki ok düğmesi ilk 5 uygulama bölümünü açar/kapatır; CPU/RAM sekmeleri ayrı sıralamaları gösterir. Bölüm başlangıçta kapalıdır ve son seçimi hatırlar. `libproc` okumaları yalnızca panel ve bu bölüm açıkken yapılır. Panel içerik boyuna göre küçülür/büyür; küçük ekranlarda kaydırılabilir.
+- **Menü çubuğu ayarları:** Ayarlar'da CPU, RAM ve sıcaklık bağımsız gösterilip gizlenir. Seçimler anında uygulanır ve `UserDefaults` ile saklanır. Üçü de gizlenirse panelin erişilebilir kalması için statvision simgesi gösterilir. Ana paneldeki ölçümler bu tercihlerden etkilenmez.
 
 ## Dosya yapısı
 
@@ -140,7 +141,7 @@ RAM sıralaması `ri_phys_footprint` değerlerinin toplamıdır; GB/MB etiketler
 
 Bu API'lerin alanları için [Apple rusage_info_v2 tanımı](https://developer.apple.com/documentation/kernel/rusage_info_v2) ve [XNU ölçüm uygulaması](https://github.com/apple-oss-distributions/xnu/blob/main/osfmk/kern/bsd_kern.c) incelenebilir.
 
-Panel kapandığında uygulama taraması ve işlem sayaç geçmişi bırakılır; sistem CPU/RAM ölçümü devam eder. Panel yeniden açılınca yeni CPU tabanı alınır. Ölçümler veya uygulama adları diske yazılmaz ve ağa gönderilmez.
+Panel veya ilk 5 uygulama bölümü kapandığında uygulama taraması ve işlem sayaç geçmişi bırakılır; sistem CPU/RAM/sıcaklık ölçümü devam eder. Liste yeniden açılınca yeni CPU tabanı alınır. Ölçümler veya uygulama adları diske yazılmaz ve ağa gönderilmez.
 
 ### Uyku, kesintiler ve zaman
 
@@ -161,12 +162,12 @@ Panel kapandığında uygulama taraması ve işlem sayaç geçmişi bırakılır
 - Yerel AppKit düğmesi ve SwiftUI kontrolleri, VoiceOver etiketleri ve okunabilir değerler içerir. Grafikler son/en düşük/en yüksek yüzde özeti sunar.
 - Panel açıkken **⌘,** ayarları açar, **⌘Q** çıkar, **Escape** paneli kapatır. Ayarlar penceresinde Escape pencereyi kapatır. macOS Klavye ile Gezinme açıkken Tab/Shift-Tab, odaklanmış düğmede Space/Return kullanılabilir. Menü çubuğuna macOS’un Control-F8 kısayoluyla ulaşılabilir; klavyeye göre Fn gerekebilir.
 - Baskı durumları hem yazı hem simgeyle belirtilir. Yerel renkler açık/koyu görünümü izler; grafik çizgileri yüksek kontrast tercihinde kalınlaşır.
-- Ağ bağlantısı, alt süreç başlatma veya işlem sonlandırma yoktur. İşlem taraması yalnızca panel açıkken çalışır. Yönetici yetkisi istenmez. Uygulama başlangıç öğesi kaydetmez.
+- Ağ bağlantısı, alt süreç başlatma veya işlem sonlandırma yoktur. İşlem taraması yalnızca panel ve uygulama bölümü açıkken çalışır. Yönetici yetkisi istenmez. Uygulama başlangıç öğesi kaydetmez.
 - Geçmiş varsayılan aralıkta yaklaşık 31, 1 saniyede en fazla 61 örnektir. CPU ve RAM sürekli ölçülür; panel kapalıyken grafik çizimi yoktur. Sabit bir pil/CPU tüketimi iddiası yapılmaz; donanım üzerinde Instruments ile ölçülmelidir.
 
 ## Testler ve doğrulama
 
-36 XCTest, gerçek sistemden bağımsız kontrollü sayaç girdileriyle hesaplamaları denetler. Uygulama çalışma zamanında bu test girdilerini veya rastgele veri kullanmaz. Uygulama sıralaması testleri yardımcı işlem toplamlarını, Apple Silicon zaman dönüşümünü, PID yeniden kullanımını, panel kapanışındaki taban sıfırlamayı ve iki ayrı ilk 5 sıralamasını da kapsar. Sıcaklık testleri çip sensörü önceliğini, PMU yedeğini, pil/ortam ayrımını, geçersiz değerleri ve eksik ölçümleri denetler.
+39 XCTest, gerçek sistemden bağımsız kontrollü sayaç girdileriyle hesaplamaları denetler. Uygulama çalışma zamanında bu test girdilerini veya rastgele veri kullanmaz. Uygulama sıralaması testleri yardımcı işlem toplamlarını, Apple Silicon zaman dönüşümünü, PID yeniden kullanımını, panel kapanışındaki taban sıfırlamayı ve iki ayrı ilk 5 sıralamasını da kapsar. Sıcaklık testleri çip sensörü önceliğini, PMU yedeğini, pil/ortam ayrımını, geçersiz değerleri ve eksik ölçümleri denetler. Menü çubuğu testleri sekiz gösterge kombinasyonunu, tüm değerler gizliyken erişilebilir kimliği ve eksik ölçüm gösterimini kapsar.
 
 Kapsam: ilk CPU örneği; lifetime yerine delta; nice sayacı; 0/100 sınırları; çok çekirdek normalizasyonu; sıfır fark; sayaç sıfırlanması/32 bit taşma; uzun boşluk/uyku; geçersiz zaman; fiziksel sıkıştırma; dosya önbelleği ayrımı; çalışma zamanı sayfa boyutu; çıkarma/çarpma/toplama taşmaları; GB birimi; 1/2/5 saniyede ve değişen aralıklarda gerçek 60 saniye; eksik geçmiş; bildirilmemiş baskı değerleri.
 
@@ -190,7 +191,7 @@ Proje dosya başvurularını, kaynak hedef üyeliklerini, paylaşılan şemayı 
 ruby scripts/validate_project.rb
 ```
 
-**Son doğrulama — 15 Kasım 2026:** Apple Silicon üzerinde Xcode 27.2 ile Debug ve Apple Silicon + Intel Release uygulama derlemeleri başarılı. `swift test` ve Xcode test hedefinde ayrı ayrı **36 test, 0 hata**. Proje başvuruları, hedef üyelikleri, paylaşılan şema ve plist denetimleri geçti. Release paketinin iki mimarisi ve yerel imza bütünlüğü doğrulandı. Sıcaklık normal kullanıcı yetkileriyle gerçek çip sensöründen okundu; bağlantı sıfırlanıp yeniden okuma denendi ve masaüstüne kurulan uygulamanın sıcaklık satırında gerçek °C değeri görüldü. Önceki doğrulamada iki ayrı ilk 5 uygulama listesi, yardımcı işlem toplamları, açık/koyu panel çizimi ve panel kapanınca sonuçların bırakılması kontrol edildi; tek çekirdekte kontrollü yoğun iş yüküyle Mach zaman dönüşümü doğrulandı (bir çekirdek ölçeğinde yaklaşık %100). VoiceOver, pil tüketimi ve gerçek cihaz uyku/uyanma davranışı ayrıca doğrulanmalıdır. Intel donanımında ve minimum macOS 13 üzerinde çalışma ayrıca denenmedi.
+**Son doğrulama — 15 Kasım 2026:** Apple Silicon üzerinde Xcode 27.2 ile Debug ve Apple Silicon + Intel Release uygulama derlemeleri başarılı. `swift test` ve Xcode test hedefinde ayrı ayrı **39 test, 0 hata**. Proje başvuruları, hedef üyelikleri, paylaşılan şema ve plist denetimleri geçti. Release paketinin iki mimarisi ve yerel imza bütünlüğü doğrulandı. Masaüstüne kurulan sürümde ok düğmesiyle uygulama listesini açma/kapatma ve CPU/RAM/sıcaklık anahtarlarını bağımsız değiştirme denendi. Sıcaklık normal kullanıcı yetkileriyle gerçek çip sensöründen okundu; bağlantı sıfırlanıp yeniden okuma denendi ve masaüstüne kurulan uygulamanın sıcaklık satırında gerçek °C değeri görüldü. Önceki doğrulamada iki ayrı ilk 5 uygulama listesi, yardımcı işlem toplamları, açık/koyu panel çizimi ve panel kapanınca sonuçların bırakılması kontrol edildi; tek çekirdekte kontrollü yoğun iş yüküyle Mach zaman dönüşümü doğrulandı (bir çekirdek ölçeğinde yaklaşık %100). VoiceOver, pil tüketimi ve gerçek cihaz uyku/uyanma davranışı ayrıca doğrulanmalıdır. Intel donanımında ve minimum macOS 13 üzerinde çalışma ayrıca denenmedi.
 
 Önerilen kısa cihaz kontrolü: önce boşta CPU/RAM’i gözleyin; ardından normal bir iş yüküyle Etkinlik Monitörü’nün toplam CPU değerini karşılaştırın. Yenileme aralığını değiştirin, paneli kapatıp menü değerlerinin devam ettiğini kontrol edin, Mac’i uyutup uyandırın. İlk CPU değerinin yeniden beklendiğini ve uyku boşluğunun çizilmediğini doğrulayın. Sistem/Açık/Koyu görünümü ve klavye kısayollarını deneyin.
 

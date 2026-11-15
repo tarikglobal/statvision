@@ -7,7 +7,9 @@
 3. Paneli tekrar açmak için ekranın üstündeki CPU/RAM yazısına tıklayın veya uygulama simgesine tekrar çift tıklayın.
 4. Uygulamayı tamamen kapatmak için paneldeki **Çıkış** düğmesini kullanın.
 
-Panelin altındaki **En çok tüketen 5 uygulama** bölümünde **CPU** veya **RAM** sekmesine tıklayın. CPU yüzdesi toplam işlemci kapasitesinin payını, RAM değeri uygulamanın bellek ayak izini gösterir. İlk CPU sıralaması bir yenileme aralığı sonra gelir. Küçük ekranlarda aşağı kaydırarak bu bölüme ulaşabilirsiniz. Panel kapandığında uygulama taraması durur.
+Panelin altındaki **En çok tüketen 5 uygulama** başlığının yanındaki oka tıklayarak listeyi açın veya kapatın. Liste başlangıçta kapalıdır; son seçiminiz hatırlanır. Açıkken **CPU** veya **RAM** sekmesine tıklayın. CPU yüzdesi toplam işlemci kapasitesinin payını, RAM değeri uygulamanın bellek ayak izini gösterir. İlk CPU sıralaması bir yenileme aralığı sonra gelir. Küçük ekranlarda aşağı kaydırarak bu bölüme ulaşabilirsiniz. Liste ya da panel kapandığında uygulama taraması durur.
+
+Panelin altındaki **Ayarlar** düğmesinden **Menü çubuğunda göster** seçeneklerine ulaşabilirsiniz. **CPU kullanımı**, **RAM kullanımı** ve **Sıcaklık** bağımsız olarak açılıp kapatılır; seçim anında uygulanır ve sonraki açılışta korunur. Üçünü de kapatırsanız paneli açabilmeniz için menü çubuğunda statvision simgesi kalır. Bu seçenekler ana paneldeki ölçümleri gizlemez.
 
 Uygulama menü çubuğunda çalışır; Dock’ta ayrı bir simge tutmaz. Finder `.app` paketini tek bir uygulama simgesi olarak gösterir. İçindeki dosyaları ayrı ayrı açmanız gerekmez.
 
