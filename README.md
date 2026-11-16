@@ -33,10 +33,12 @@ statvision/
     MetricCalculations.swift
     ApplicationMetrics.swift
     TemperatureMetrics.swift
+    PowerMetrics.swift
   System/
     SystemSampler.swift
     ApplicationSampler.swift
     TemperatureReader.swift
+    PowerReader.swift
   Views/
     MonitorPanel.swift
     HistoryChart.swift
@@ -132,6 +134,16 @@ Bir isteğin kabul edilmesi uygulamanın çıktığı anlamına gelmez. Panel is
 
 Kapatmadan hemen önce PID ve `ri_proc_start_abstime` birlikte doğrulanır; eski bir satır üzerinden PID'si yeniden kullanılmış yeni bir süreç hedeflenmez. Finder, Dock, oturum ve sistem arayüzü uygulamaları, `/System/Library/` altındaki servisler ve statvision bu düğmeden kapatılamaz. Statvision için kendi **Çıkış** düğmesi kullanılır. Ana uygulama ölçülemiyorsa veya kimliği doğrulanamıyorsa × pasif kalır ve açıklama sunar. Yönetici yetkisi veya ek izin istenmez.
 
+### Güç tüketimi (W)
+
+Panelde **Güç tüketimi** kartı, macOS'un yayımladığı son güç sensörü değerini gösterir. `AppleSmartBattery` IORegistry kaydı `IORegistryEntryCreateCFProperties` ile aynı arka plan ölçüm kuyruğunda okunur; alt süreç, powermetrics, sudo, yönetici yardımcısı veya ağ kullanılmaz. Servis başvurusu yeniden kullanılır ve hata/uyku/kapanışta bırakılır. Uygulama ölçüm aralığı yine 1/2/5 saniyedir; donanımın yayın aralığı farklı ve daha uzun olabilir. Bu yüzden panelde **son sensör verisi** ve **sensör daha seyrek yenilenebilir** açıklamaları vardır; her UI yenilemesi yeni bir donanım ölçümü anlamına gelmez.
+
+Öncelikli kaynak `PowerTelemetryData.SystemLoad` alanıdır: `W = SystemLoad / 1000` (mW → W). Bu, sistemin bildirdiği cihaz yüküdür. `SystemPowerIn` (adaptör girişi), `BatteryPower` (pil akışı) ve adaptörün anma gücü tüketim yerine kullanılmaz. Alanın gözlemlenen anlamı/birimi için [macwatt'ın doğrudan telemetri okuyucusu](https://github.com/ytomasch/macwatt/blob/main/macwatt.py) incelenebilir. Şema belgelenmemiştir; model/macOS sürümüne göre alanlar eksik veya farklı olabilir. Prizden ölçülen AC tüketimi veya elektrik sayacı doğruluğu iddiası yoktur.
+
+SystemLoad kullanılamıyorsa, yalnızca **harici güç bağlı değilken**, **şarj yokken** ve **pil akımı negatifken** `W = Voltage(mV) × -Current(mA) / 1.000.000` yedeği kullanılır; kaynak **Pil deşarjı** olarak ayrı belirtilir. `InstantAmperage` tercih edilir, yoksa `Amperage` okunur. İşaretsiz ikiye tümleyen biçimde gelen akım signed Int64 olarak çözülür; hesap Double ile yapılarak Int64.min taşması önlenir. Adaptördeki veya şarj olan pilin akımı toplam cihaz tüketimi gibi sunulmaz.
+
+Eksik, sıfır, negatif, sonsuz/NaN veya laptop için fiziksel anlam taşımayan (1000 W ve üzeri) değerler reddedilir; arayüzde **— W** ve açıklama görünür. Okuma hatasında önceki değer tutulmaz; uykuda değer temizlenir, uyanınca tekrar okunur. AppleSmartBattery kaydı olmayan Mac'lerde güç ölçümü kullanılamaz; diğer göstergeler çalışmaya devam eder. Pil/adapter takılıp çıkarılması bu sürümün canlı cihaz testinde zorlanmadı; şarj durumları kontrollü hesap testleriyle denetlenir.
+
 ### Sıcaklık
 
 Menü çubuğunda CPU ve RAM'in yanında **°C**, panelde **Sıcaklık** satırı bulunur. Apple Silicon'da IOKit'in IOHID sıcaklık servisleri salt okunur biçimde sorgulanır. `PMU… tdie…` adlarıyla sunulan geçerli çip sensörlerinin en yükseği gösterilir: bu tek bir CPU çekirdeğinin ortalaması, kasa yüzeyi veya ortam sıcaklığı değildir. Çip sensörü yoksa `PMU… tcal` sensörü kullanılır ve panelde **PMU sıcaklık sensörü** olarak ayrıca belirtilir. Pil, `tdev` veya kaynağı belirlenemeyen sensörler çip sıcaklığı diye gösterilmez.
@@ -176,7 +188,7 @@ Panel veya ilk 5 uygulama bölümü kapandığında uygulama taraması ve işlem
 
 ## Testler ve doğrulama
 
-45 XCTest, gerçek sistemden bağımsız kontrollü sayaç girdileriyle hesaplamaları denetler. Uygulama çalışma zamanında bu test girdilerini veya rastgele veri kullanmaz. Uygulama sıralaması testleri yardımcı işlem toplamlarını, Apple Silicon zaman dönüşümünü, PID yeniden kullanımını, panel kapanışındaki taban sıfırlamayı ve iki ayrı ilk 5 sıralamasını da kapsar. Sıcaklık testleri çip sensörü önceliğini, PMU yedeğini, pil/ortam ayrımını, geçersiz değerleri ve eksik ölçümleri denetler. Menü çubuğu testleri sekiz gösterge kombinasyonunu, tüm değerler gizliyken erişilebilir kimliği ve eksik ölçüm gösterimini kapsar. Kapatma testleri sistem uygulamalarının korunmasını, normal Apple uygulamalarına izin verilmesini, statvision için ayrı çıkış yolunu ve PID/başlangıç zamanı eşlemesini kapsar.
+53 XCTest, gerçek sistemden bağımsız kontrollü sayaç girdileriyle hesaplamaları denetler. Uygulama çalışma zamanında bu test girdilerini veya rastgele veri kullanmaz. Uygulama sıralaması testleri yardımcı işlem toplamlarını, Apple Silicon zaman dönüşümünü, PID yeniden kullanımını, panel kapanışındaki taban sıfırlamayı ve iki ayrı ilk 5 sıralamasını da kapsar. Sıcaklık testleri çip sensörü önceliğini, PMU yedeğini, pil/ortam ayrımını, geçersiz değerleri ve eksik ölçümleri denetler. Menü çubuğu testleri sekiz gösterge kombinasyonunu, tüm değerler gizliyken erişilebilir kimliği ve eksik ölçüm gösterimini kapsar. Kapatma testleri sistem uygulamalarının korunmasını, normal Apple uygulamalarına izin verilmesini, statvision için ayrı çıkış yolunu ve PID/başlangıç zamanı eşlemesini kapsar. Güç testleri mW/W ve V×A dönüşümlerini, şarj/tüketim ayrımını, unsigned akımı, geçersiz alanları ve pil yedeğini kapsar.
 
 Kapsam: ilk CPU örneği; lifetime yerine delta; nice sayacı; 0/100 sınırları; çok çekirdek normalizasyonu; sıfır fark; sayaç sıfırlanması/32 bit taşma; uzun boşluk/uyku; geçersiz zaman; fiziksel sıkıştırma; dosya önbelleği ayrımı; çalışma zamanı sayfa boyutu; çıkarma/çarpma/toplama taşmaları; GB birimi; 1/2/5 saniyede ve değişen aralıklarda gerçek 60 saniye; eksik geçmiş; bildirilmemiş baskı değerleri.
 
@@ -200,7 +212,7 @@ Proje dosya başvurularını, kaynak hedef üyeliklerini, paylaşılan şemayı 
 ruby scripts/validate_project.rb
 ```
 
-**Son doğrulama — 15 Kasım 2026:** Apple Silicon üzerinde Xcode 27.2 ile Debug ve Apple Silicon + Intel Release uygulama derlemeleri başarılı. `swift test` ve Xcode test hedefinde ayrı ayrı **45 test, 0 hata**. Proje başvuruları, hedef üyelikleri, paylaşılan şema ve plist denetimleri geçti. Release paketinin iki mimarisi ve yerel imza bütünlüğü doğrulandı. Ayrı bir yerel test uygulamasıyla × düğmesi denendi: ilk kapatma isteği uygulama tarafından iptal edildi ve uygulama açık kaldı; ikinci istekte normal çıkış geri çağrısı çalıştı ve satır listeden kaldırıldı. Kullanıcının açık uygulamaları bu testte kapatılmadı. Masaüstüne kurulan sürümde ok düğmesiyle uygulama listesini açma/kapatma ve CPU/RAM/sıcaklık anahtarlarını bağımsız değiştirme denendi. Sıcaklık normal kullanıcı yetkileriyle gerçek çip sensöründen okundu; bağlantı sıfırlanıp yeniden okuma denendi ve masaüstüne kurulan uygulamanın sıcaklık satırında gerçek °C değeri görüldü. Önceki doğrulamada iki ayrı ilk 5 uygulama listesi, yardımcı işlem toplamları, açık/koyu panel çizimi ve panel kapanınca sonuçların bırakılması kontrol edildi; tek çekirdekte kontrollü yoğun iş yüküyle Mach zaman dönüşümü doğrulandı (bir çekirdek ölçeğinde yaklaşık %100). VoiceOver, pil tüketimi ve gerçek cihaz uyku/uyanma davranışı ayrıca doğrulanmalıdır. Intel donanımında ve minimum macOS 13 üzerinde çalışma ayrıca denenmedi.
+**Son doğrulama — 16 Kasım 2026:** Apple Silicon üzerinde Xcode 27.2 ile Debug ve Apple Silicon + Intel Release uygulama derlemeleri başarılı. `swift test` ve Xcode test hedefinde ayrı ayrı **53 test, 0 hata**. Proje başvuruları, hedef üyelikleri, paylaşılan şema ve plist denetimleri geçti. Release paketinin iki mimarisi ve yerel imza bütünlüğü doğrulandı. Güç kartının masaüstüne kurulan sürümde gerçek SystemLoad verisini watt olarak gösterdiği kontrol edildi; paylaşım ZIP’i proje klasöründe güncellendi. Ayrı bir yerel test uygulamasıyla × düğmesi denendi: ilk kapatma isteği uygulama tarafından iptal edildi ve uygulama açık kaldı; ikinci istekte normal çıkış geri çağrısı çalıştı ve satır listeden kaldırıldı. Kullanıcının açık uygulamaları bu testte kapatılmadı. Masaüstüne kurulan sürümde ok düğmesiyle uygulama listesini açma/kapatma ve CPU/RAM/sıcaklık anahtarlarını bağımsız değiştirme denendi. Sıcaklık normal kullanıcı yetkileriyle gerçek çip sensöründen okundu; bağlantı sıfırlanıp yeniden okuma denendi ve masaüstüne kurulan uygulamanın sıcaklık satırında gerçek °C değeri görüldü. Önceki doğrulamada iki ayrı ilk 5 uygulama listesi, yardımcı işlem toplamları, açık/koyu panel çizimi ve panel kapanınca sonuçların bırakılması kontrol edildi; tek çekirdekte kontrollü yoğun iş yüküyle Mach zaman dönüşümü doğrulandı (bir çekirdek ölçeğinde yaklaşık %100). VoiceOver, pil tüketimi ve gerçek cihaz uyku/uyanma davranışı ayrıca doğrulanmalıdır. Intel donanımında ve minimum macOS 13 üzerinde çalışma ayrıca denenmedi.
 
 Önerilen kısa cihaz kontrolü: önce boşta CPU/RAM’i gözleyin; ardından normal bir iş yüküyle Etkinlik Monitörü’nün toplam CPU değerini karşılaştırın. Yenileme aralığını değiştirin, paneli kapatıp menü değerlerinin devam ettiğini kontrol edin, Mac’i uyutup uyandırın. İlk CPU değerinin yeniden beklendiğini ve uyku boşluğunun çizilmediğini doğrulayın. Sistem/Açık/Koyu görünümü ve klavye kısayollarını deneyin.
 

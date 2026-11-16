@@ -17,9 +17,11 @@ Uygulama menü çubuğunda çalışır; Dock’ta ayrı bir simge tutmaz. Finder
 
 Menü çubuğunda CPU ve RAM'in yanındaki **°C** değeri sıcaklığı gösterir. Panelde **Sıcaklık** satırında ölçüm kaynağı belirtilir. Bu Mac'te en sıcak geçerli çip sensörü kullanılır; kasa yüzeyi veya ortam sıcaklığı değildir. Desteklenen sensör okunamıyorsa **— °C** görünür. Değer, Ayarlar'da seçilen 1/2/5 saniyelik ölçüm aralığıyla yenilenir.
 
+Paneldeki **Güç tüketimi** kartı, Mac'in bildirdiği son tüketimi **W** olarak gösterir. Sensörün kendi yenileme hızı uygulamadan daha yavaş olabilir. Bu değer priz ölçümü veya adaptörün üzerinde yazan maksimum güç değildir. Desteklenen sistem yükü verisi yoksa yalnızca pille çalışırken **Pil deşarjı** kaynağı kullanılabilir; güvenilir veri yoksa **— W** görünür.
+
 ## Başka Mac’e gönderme
 
-`statvision-macOS-universal.zip` dosyasını gönderin. Masaüstüne hazırlanan kopyanın adı `statvision-paylasim.zip` olabilir; içeriği aynıdır.
+`statvision-macOS-universal.zip` dosyasını gönderin. Proje klasöründeki paylaşım kopyasının adı `statvision-paylasim.zip`tir; içeriği aynıdır.
 
 Alıcı ZIP’e çift tıklayıp `statvision.app` dosyasını çıkarır. Uygulamayı Uygulamalar klasörüne taşıyabilir, ardından çift tıklayarak açabilir. Xcode veya Swift kurulması gerekmez. Paket hem Apple Silicon hem Intel mimarisini içerir; minimum sürüm macOS 13’tür. Intel donanımında ve macOS 13 üzerinde çalışma ayrıca denenmemiştir.
 

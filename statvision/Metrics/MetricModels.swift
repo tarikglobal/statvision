@@ -96,16 +96,18 @@ struct SystemSample: Equatable {
     let pressure: MemoryPressure
     let pressureSource: PressureSource
     let temperature: TemperatureReading?
+    let power: PowerReading?
 
     init(timestamp: TimeInterval, cpu: CPUReading, memory: MemoryReading?,
          pressure: MemoryPressure, pressureSource: PressureSource,
-         temperature: TemperatureReading? = nil) {
+         temperature: TemperatureReading? = nil, power: PowerReading? = nil) {
         self.timestamp = timestamp
         self.cpu = cpu
         self.memory = memory
         self.pressure = pressure
         self.pressureSource = pressureSource
         self.temperature = temperature
+        self.power = power
     }
 }
 

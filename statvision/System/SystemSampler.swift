@@ -17,6 +17,7 @@ final class SystemSampler {
     private let reader = SystemReader()
     private let applicationSampler = ApplicationSampler()
     private let temperatureReader = TemperatureReader()
+    private let powerReader = PowerReader()
     private var applications: [ApplicationDescriptor] = []
     private var applicationSession: UUID?
     private var timer: DispatchSourceTimer?
@@ -86,6 +87,7 @@ final class SystemSampler {
         notifiedPressure = .unavailable
         applicationSampler.reset()
         temperatureReader.reset()
+        powerReader.reset()
     }
 
     private func installPressureSourceIfNeeded() {
@@ -119,7 +121,8 @@ final class SystemSampler {
             : (notifiedPressure != .unavailable ? .notification : .unavailable)
         onSample?(SystemSample(timestamp: timestamp, cpu: cpu, memory: reader.memory(),
                                pressure: resolvedPressure, pressureSource: origin,
-                               temperature: temperatureReader.read(at: timestamp)))
+                               temperature: temperatureReader.read(at: timestamp),
+                               power: powerReader.read(at: timestamp)))
         sampleApplications()
     }
 

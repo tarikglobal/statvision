@@ -431,6 +431,88 @@ final class ApplicationTerminationPolicyTests: XCTestCase {
     }
 }
 
+final class PowerCalculatorTests: XCTestCase {
+    func testSystemLoadUsesMilliwattsAndDoesNotCountChargingOrAdapterPower() throws {
+        let result = try XCTUnwrap(PowerCalculator.reading(from: PowerInput(registry: [
+            "PowerTelemetryData": ["SystemLoad": 15_500, "SystemPowerIn": 80_000, "BatteryPower": 64_500],
+            "Voltage": 12_000, "InstantAmperage": 3000, "ExternalConnected": true, "IsCharging": true
+        ])))
+        XCTAssertEqual(result.watts, 15.5)
+        XCTAssertEqual(result.source, .systemLoad)
+    }
+
+    func testBatteryFallbackUsesVoltageTimesDischargingCurrent() throws {
+        for currentKey in ["InstantAmperage", "Amperage"] {
+            let result = try XCTUnwrap(PowerCalculator.reading(from: PowerInput(registry: [
+                "Voltage": 12_000, currentKey: -500, "ExternalConnected": false, "IsCharging": false
+            ])))
+            XCTAssertEqual(result.watts, 6)
+            XCTAssertEqual(result.source, .batteryDischarge)
+        }
+    }
+
+    func testACAndChargingFlowsAreNeverReportedAsSystemConsumption() {
+        for states in [(true, false), (true, true), (false, true)] {
+            XCTAssertNil(PowerCalculator.reading(from: PowerInput(registry: [
+                "Voltage": 12_000, "InstantAmperage": -500,
+                "ExternalConnected": states.0, "IsCharging": states.1
+            ])))
+        }
+        XCTAssertNil(PowerCalculator.reading(from: PowerInput(registry: [
+            "Voltage": 12_000, "InstantAmperage": -500
+        ])))
+    }
+
+    func testUnsignedTwosComplementCurrentIsDecodedWithoutOverflow() throws {
+        let result = try XCTUnwrap(PowerCalculator.reading(from: PowerInput(registry: [
+            "Voltage": 12_000, "InstantAmperage": NSNumber(value: UInt64.max - 1999),
+            "ExternalConnected": false, "IsCharging": false
+        ])))
+        XCTAssertEqual(result.watts, 24)
+    }
+
+    func testInvalidSystemLoadIsUnavailableInsteadOfClamped() {
+        for value in [0.0, -1, .nan, .infinity, 1_000_000_000] {
+            XCTAssertNil(PowerCalculator.reading(from: PowerInput(registry: [
+                "PowerTelemetryData": ["SystemLoad": value], "ExternalConnected": true
+            ])))
+        }
+    }
+
+    func testInvalidBatteryVoltageCurrentAndPositiveChargingAreUnavailable() {
+        for voltage in [0.0, -12_000, .nan, .infinity, Double.greatestFiniteMagnitude] {
+            XCTAssertNil(PowerCalculator.reading(from: PowerInput(registry: [
+                "Voltage": voltage, "InstantAmperage": -500,
+                "ExternalConnected": false, "IsCharging": false
+            ])))
+        }
+        for current in [Int64(0), 500, .min] {
+            XCTAssertNil(PowerCalculator.reading(from: PowerInput(registry: [
+                "Voltage": 12_000, "InstantAmperage": current,
+                "ExternalConnected": false, "IsCharging": false
+            ])))
+        }
+    }
+
+    func testInvalidPrimaryAllowsValidInstantaneousBatteryFallback() throws {
+        let result = try XCTUnwrap(PowerCalculator.reading(from: PowerInput(registry: [
+            "PowerTelemetryData": ["SystemLoad": 0], "Voltage": 12_000,
+            "InstantAmperage": -500, "Amperage": -1000,
+            "ExternalConnected": false, "IsCharging": false
+        ])))
+        XCTAssertEqual(result.watts, 6)
+        XCTAssertEqual(result.source, .batteryDischarge)
+    }
+
+    func testMissingFieldsAndNonnumericValuesDoNotInventPower() {
+        for properties: [String: Any] in [[:], ["PowerTelemetryData": ["SystemLoad": "15000"]],
+            ["PowerTelemetryData": ["SystemLoad": true]],
+            ["AdapterDetails": ["Watts": 65], "PowerTelemetryData": ["SystemPowerIn": 50_000]]] {
+            XCTAssertNil(PowerCalculator.reading(from: PowerInput(registry: properties)))
+        }
+    }
+}
+
 final class HistoryAndPressureTests: XCTestCase {
     private func sample(at timestamp: Double, missing: Bool = false) -> SystemSample {
         SystemSample(timestamp: timestamp,

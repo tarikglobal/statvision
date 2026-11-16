@@ -63,6 +63,7 @@ struct MonitorPanel: View {
             }
             pressureIndicator
             temperatureIndicator
+            powerIndicator
             Divider()
             VStack(spacing: 12) {
                 HistoryChart(title: "CPU", samples: chartSamples, end: chartEnd,
@@ -157,6 +158,33 @@ struct MonitorPanel: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Bellek baskısı")
         .accessibilityValue("\(pressure.title). \(origin.explanation)")
+    }
+
+    private var powerIndicator: some View {
+        let reading = store.latest?.power
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 9) {
+                Image(systemName: "bolt.fill").foregroundStyle(.yellow).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Güç tüketimi").font(.caption.weight(.medium))
+                    Text(reading?.source.title ?? "Desteklenen güç verisi alınamadı")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Text(reading?.text ?? "— W")
+                    .font(.system(.body, design: .rounded).weight(.semibold)).monospacedDigit()
+            }
+            if reading != nil {
+                Text("Sensör daha seyrek yenilenebilir.").font(.caption2).foregroundStyle(.secondary)
+            }
+        }
+        .padding(10)
+        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 9))
+        .help("Mac’in son güç sensörü ölçümüdür; prizden çekilen elektrik veya adaptörün kapasitesi değildir. Sensörün yenileme hızı uygulama aralığından farklı olabilir.")
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Güç tüketimi")
+        .accessibilityValue(reading.map { "\($0.text), \($0.source.title). Sensör daha seyrek yenilenebilir." }
+                            ?? "Desteklenen güç verisi alınamadı")
     }
 
     private var temperatureIndicator: some View {
