@@ -5,7 +5,7 @@ statvision_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$statvision_root"
 
 if [[ ! -f statvision/Resources/AppIcon.icns ]]; then
-  printf 'Missing AppIcon.icns; run scripts/generate-icon.swift and iconutil first.\n' >&2
+  printf 'Missing AppIcon.icns; run bash scripts/generate-icon.sh first.\n' >&2
   exit 1
 fi
 

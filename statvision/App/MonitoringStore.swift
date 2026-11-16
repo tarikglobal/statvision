@@ -29,6 +29,9 @@ final class MonitoringStore: ObservableObject {
     @Published private(set) var hasApplicationSample = false
     @Published private(set) var closingApplications = Set<String>()
     @Published private(set) var terminationMessage: String?
+    @Published var menuBarMode: MenuBarMode {
+        didSet { defaults.set(menuBarMode.rawValue, forKey: "menuBarMode") }
+    }
     @Published var applicationsExpanded: Bool {
         didSet {
             guard applicationsExpanded != oldValue else { return }
@@ -95,6 +98,7 @@ final class MonitoringStore: ObservableObject {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        menuBarMode = MenuBarMode(rawValue: defaults.string(forKey: "menuBarMode") ?? "") ?? .metrics
         applicationsExpanded = defaults.object(forKey: "applicationsExpanded") as? Bool ?? false
         menuBarVisibility = MenuBarVisibility(
             showCPU: defaults.object(forKey: "menuBarShowCPU") as? Bool ?? true,

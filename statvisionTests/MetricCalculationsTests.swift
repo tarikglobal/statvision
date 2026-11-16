@@ -5,6 +5,67 @@ import XCTest
 @testable import statvision
 #endif
 
+final class EyeInteractionTests: XCTestCase {
+    func testDisabledModeNeverShowsPreviewOrBlinks() {
+        let state = EyeInteractionState(statusHovered: true, previewHovered: true)
+        XCTAssertFalse(state.shouldShowPreview)
+        XCTAssertFalse(state.shouldBlink)
+    }
+
+    func testIdleEyeBlinksWithoutOpeningAPanel() {
+        let state = EyeInteractionState(enabled: true)
+        XCTAssertTrue(state.shouldBlink)
+        XCTAssertFalse(state.shouldShowPreview)
+    }
+
+    func testHoverStopsBlinkingAndRequestsPreview() {
+        let state = EyeInteractionState(enabled: true, statusHovered: true)
+        XCTAssertFalse(state.shouldBlink)
+        XCTAssertTrue(state.shouldShowPreview)
+    }
+
+    func testMovingIntoPreviewKeepsItVisibleThenLeavingRestoresBlinking() {
+        var state = EyeInteractionState(enabled: true, statusHovered: true)
+        state.previewHovered = true
+        state.statusHovered = false
+        XCTAssertTrue(state.shouldShowPreview)
+        XCTAssertFalse(state.shouldBlink)
+        state.previewHovered = false
+        XCTAssertFalse(state.shouldShowPreview)
+        XCTAssertTrue(state.shouldBlink)
+    }
+
+    func testMainPanelSuppressesPreviewAndBlinkEvenIfPointerRemainsInside() {
+        let state = EyeInteractionState(enabled: true, statusHovered: true, mainPanelOpen: true)
+        XCTAssertFalse(state.shouldShowPreview)
+        XCTAssertFalse(state.shouldBlink)
+    }
+
+    func testSleepingSuppressesBothBehaviorsAndWakeAllowsHover() {
+        var state = EyeInteractionState(enabled: true, statusHovered: true, sleeping: true)
+        XCTAssertFalse(state.shouldShowPreview)
+        XCTAssertFalse(state.shouldBlink)
+        state.sleeping = false
+        XCTAssertTrue(state.shouldShowPreview)
+    }
+
+    func testReduceMotionKeepsPreviewAvailableWithoutBlinking() {
+        var state = EyeInteractionState(enabled: true, reduceMotion: true)
+        XCTAssertFalse(state.shouldBlink)
+        state.statusHovered = true
+        XCTAssertTrue(state.shouldShowPreview)
+        XCTAssertFalse(state.shouldBlink)
+    }
+
+    func testSwitchingOutOfEyeModeClosesHoveredPreview() {
+        var state = EyeInteractionState(enabled: true, previewHovered: true)
+        XCTAssertTrue(state.shouldShowPreview)
+        state.enabled = false
+        XCTAssertFalse(state.shouldShowPreview)
+        XCTAssertFalse(state.shouldBlink)
+    }
+}
+
 final class CPUCalculatorTests: XCTestCase {
     private func ticks(_ user: UInt32 = 100, _ system: UInt32 = 50,
                        _ idle: UInt32 = 850, _ nice: UInt32 = 0,

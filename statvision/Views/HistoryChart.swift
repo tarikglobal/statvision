@@ -24,7 +24,7 @@ struct HistoryChart: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(title).font(.caption.weight(.semibold))
+                Text(title).font(.system(size: 10, weight: .bold, design: .monospaced)).tracking(1.5)
                 Spacer()
                 Text(currentPercentageText)
                     .font(.caption.monospacedDigit().weight(.semibold))

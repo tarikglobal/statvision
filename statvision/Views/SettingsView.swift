@@ -3,23 +3,38 @@ import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject var store: MonitoringStore
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
-                Image(systemName: "slider.horizontal.3").foregroundStyle(.tint)
-                Text("statvision Ayarları").font(.headline)
+                EyeMark().frame(width: 42, height: 27)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("statvision").font(.system(size: 21, weight: .heavy, design: .rounded))
+                    Text("Kontrol sende.").font(.caption).foregroundStyle(.secondary)
+                }
             }
+            VStack(alignment: .leading, spacing: 9) {
+                Text("Menü çubuğu modu").font(.headline)
+                Picker("Menü çubuğu modu", selection: $store.menuBarMode) {
+                    ForEach(MenuBarMode.allCases) { mode in Text(mode.title).tag(mode) }
+                }
+                .pickerStyle(.segmented).labelsHidden()
+                Text("Göz modunda simge göz kırpar. Üzerine gelince CPU, RAM, sıcaklık ve güç küçük bir cam panelde görünür. Tıklamak tam paneli açar.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            .monitorCard()
             VStack(alignment: .leading, spacing: 10) {
                 Text("Menü çubuğunda göster").font(.headline)
                 Toggle("CPU kullanımı", isOn: $store.menuBarVisibility.showCPU)
                 Toggle("RAM kullanımı", isOn: $store.menuBarVisibility.showMemory)
                 Toggle("Sıcaklık", isOn: $store.menuBarVisibility.showTemperature)
-                Text("Tümünü kapatırsan menü çubuğunda yalnızca statvision simgesi görünür.")
+                Text(store.menuBarMode == .eye ? "Bu seçimler Göstergeler modunda kullanılır." : "Tümünü kapatırsan menü çubuğunda yalnızca statvision simgesi görünür.")
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .toggleStyle(.switch)
+            .disabled(store.menuBarMode == .eye)
             Divider()
             Form {
                 Picker("Yenileme aralığı", selection: $store.refreshInterval) {
@@ -43,7 +58,8 @@ struct SettingsView: View {
         }
         .padding(24)
         .frame(width: 410)
-        .tint(.teal)
+        .background(MonitorBackdrop())
+        .tint(StatvisionPalette.accent(scheme))
         .preferredColorScheme(store.appearance.colorScheme)
         .onExitCommand { NSApplication.shared.keyWindow?.performClose(nil) }
     }

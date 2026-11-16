@@ -21,6 +21,12 @@ Menü çubuğunda CPU ve RAM'in yanındaki **°C** değeri sıcaklığı göster
 
 Paneldeki **Güç tüketimi** kartı, Mac'in bildirdiği son tüketimi **W** olarak gösterir. Sensörün kendi yenileme hızı uygulamadan daha yavaş olabilir. Bu değer priz ölçümü veya adaptörün üzerinde yazan maksimum güç değildir. Desteklenen sistem yükü verisi yoksa yalnızca pille çalışırken **Pil deşarjı** kaynağı kullanılabilir; güvenilir veri yoksa **— W** görünür.
 
+## Göz modu
+
+**Ayarlar → Menü çubuğu modu → Göz modu** seçin. Menüdeki yazılar tek bir göz simgesine dönüşür. Göz ara sıra kırpılır; fareyi üzerine götürdüğünüzde CPU, RAM, sıcaklık ve watt küçük, saydam bir panelde görünür. Fareyi uzaklaştırınca kapanır. Göze tıklamak ana ekranı açar. Normal yazılara dönmek için aynı yerden **Göstergeler** seçin. Mod tercihiniz hatırlanır.
+
+Sistemde **Hareketi azalt** açıksa göz kırpmaz; üzerine gelince değerleri yine gösterir. **Saydamlığı azalt** açıksa küçük panel opak görünür. Ana ekranın **Ayarlar** ve **Çıkış** düğmeleri aşağı kaydırmadan da erişilebilir.
+
 ## Başka Mac’e gönderme
 
 `statvision-macOS-universal.zip` dosyasını gönderin. Proje klasöründeki paylaşım kopyasının adı `statvision-paylasim.zip`tir; içeriği aynıdır.
@@ -49,6 +55,5 @@ Masaüstüne ilk kurulum için `bash scripts/install-desktop.sh` çalıştırıl
 Simgeyi yeniden üretmek için:
 
 ```sh
-swift scripts/generate-icon.swift
-iconutil -c icns build/AppIcon.iconset -o statvision/Resources/AppIcon.icns
+bash scripts/generate-icon.sh
 ```

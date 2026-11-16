@@ -128,6 +128,28 @@ struct MenuBarVisibility: Equatable {
     var showTemperature = true
 }
 
+enum MenuBarMode: String, CaseIterable, Identifiable {
+    case metrics, eye
+    var id: String { rawValue }
+    var title: String { self == .eye ? "Göz modu" : "Göstergeler" }
+}
+
+struct EyeInteractionState: Equatable {
+    var enabled = false
+    var statusHovered = false
+    var previewHovered = false
+    var mainPanelOpen = false
+    var sleeping = false
+    var reduceMotion = false
+
+    var shouldShowPreview: Bool {
+        enabled && !sleeping && !mainPanelOpen && (statusHovered || previewHovered)
+    }
+    var shouldBlink: Bool {
+        enabled && !sleeping && !mainPanelOpen && !reduceMotion && !statusHovered && !previewHovered
+    }
+}
+
 struct MenuBarPresentation {
     let title: String
     let accessibilityValue: String

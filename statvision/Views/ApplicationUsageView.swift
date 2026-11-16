@@ -7,6 +7,7 @@ struct ApplicationUsageView: View {
     let closeApplication: (ApplicationUsage) -> Void
     let terminationMessage: String?
     @State private var ranking: ApplicationRanking = .cpu
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
@@ -14,6 +15,7 @@ struct ApplicationUsageView: View {
                 ForEach(ApplicationRanking.allCases) { Text($0.rawValue).tag($0) }
             }
             .pickerStyle(.segmented)
+            .labelsHidden().controlSize(.small)
             .accessibilityLabel("En çok tüketen uygulamaları sıralama")
 
             VStack(spacing: 7) {
@@ -34,7 +36,7 @@ struct ApplicationUsageView: View {
                                     Text(app.name).lineLimit(1).truncationMode(.tail)
                                     Spacer(minLength: 8)
                                     Text(value(for: app)).monospacedDigit()
-                                        .foregroundStyle(ranking == .cpu ? Color.blue : Color.teal)
+                                        .foregroundStyle(ranking == .cpu ? StatvisionPalette.accent(scheme) : StatvisionPalette.cyan(scheme))
                                 }
                                 .accessibilityElement(children: .ignore)
                                 .accessibilityLabel("\(index + 1). \(app.name)")

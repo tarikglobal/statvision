@@ -16,6 +16,16 @@ Hazır uygulamayı açmak ve başka Mac’lere göndermek için [kullanım ve pa
 - **Uygulama sıralaması:** Panelin altındaki ok düğmesi ilk 5 uygulama bölümünü açar/kapatır; CPU/RAM sekmeleri ayrı sıralamaları gösterir. Bölüm başlangıçta kapalıdır ve son seçimi hatırlar. `libproc` okumaları yalnızca panel ve bu bölüm açıkken yapılır. Panel içerik boyuna göre küçülür/büyür; küçük ekranlarda kaydırılabilir.
 - **Menü çubuğu ayarları:** Ayarlar'da CPU, RAM ve sıcaklık bağımsız gösterilip gizlenir. Seçimler anında uygulanır ve `UserDefaults` ile saklanır. Üçü de gizlenirse panelin erişilebilir kalması için statvision simgesi gösterilir. Ana paneldeki ölçümler bu tercihlerden etkilenmez.
 
+## Göz modu ve tasarım
+
+**1.1.0** sürümü, tek vektör göz işaretinden üretilen uygulama/menü simgesi, neon yeşil ve turkuaz göstergeler, keskin tipografi ve açık/koyu renk paletleri içerir. Ayarlar ve Çıkış, kaydırılabilir içeriğin altında sabit kalır.
+
+**Ayarlar → Menü çubuğu modu → Göz modu** seçildiğinde sayılar yerine tek bir göz görünür. Yaklaşık 6,8 saniyede bir kısa göz kırpma için önbellekteki üç küçük simge kullanılır; sürekli animasyon veya fare konumu sorgusu yoktur. Üzerine gelince 180 ms sonra CPU, RAM, sıcaklık ve watt içeren yaklaşık 286 × 195 pt cam önizleme açılır. Fare önizlemeye taşınabilir; iki alandan da ayrılınca 240 ms içinde kapanır. Tıklamak asıl paneli açar. Ana panel, uyku veya başka mod seçimi önizlemeyi kapatır.
+
+Önizleme klavye odağını almaz, uygulamayı etkinleştirmez ve hiçbir giriş izni istemez; yalnızca yerel `NSTrackingArea` kullanır. Önizlemede grafik ve uygulama listesi bulunmaz; o alanlar kapalıyken işlem taraması başlamaz. Sistem **Hareketi azalt** seçeneği göz kırpmayı durdurur; üzerine gelme çalışmaya devam eder. **Saydamlığı azalt**, camı opak yüzeye dönüştürür. İlk kurulumda Göstergeler modu korunur; göz modu ve gösterge seçimleri yeniden başlatmalarda hatırlanır.
+
+Simgeyi aynı vektör kaynaktan yeniden üretmek için `bash scripts/generate-icon.sh` çalıştırılır. Harici görsel veya paket gerektirmez.
+
 ## Dosya yapısı
 
 ```text
@@ -28,6 +38,10 @@ statvision/
     AppDelegate.swift
     MonitoringStore.swift
     ApplicationTerminator.swift
+    EyeModeController.swift
+  Design/
+    EyeArtwork.swift
+    StatvisionStyle.swift
   Metrics/
     MetricModels.swift
     MetricCalculations.swift
@@ -44,6 +58,7 @@ statvision/
     HistoryChart.swift
     SettingsView.swift
     ApplicationUsageView.swift
+    HoverPreview.swift
   Resources/
     Info.plist
     AppIcon.icns
@@ -53,6 +68,7 @@ statvisionTests/
 scripts/
   validate_project.rb
   generate-icon.swift
+  generate-icon.sh
   package-release.sh
   install-desktop.sh
 Package.swift
@@ -196,7 +212,7 @@ Liste açıldığında veya aralık değiştiğinde host ve uygulama sayaçları
 
 ## Testler ve doğrulama
 
-60 XCTest, gerçek sistemden bağımsız kontrollü sayaç girdileriyle hesaplamaları denetler. Uygulama çalışma zamanında bu test girdilerini veya rastgele veri kullanmaz. Uygulama sıralaması testleri yardımcı işlem toplamlarını, Apple Silicon zaman dönüşümünü, PID yeniden kullanımını, panel kapanışındaki taban sıfırlamayı ve iki ayrı ilk 5 sıralamasını da kapsar. Sıcaklık testleri çip sensörü önceliğini, PMU yedeğini, pil/ortam ayrımını, geçersiz değerleri ve eksik ölçümleri denetler. Menü çubuğu testleri sekiz gösterge kombinasyonunu, tüm değerler gizliyken erişilebilir kimliği ve eksik ölçüm gösterimini kapsar. Kapatma testleri sistem uygulamalarının korunmasını, normal Apple uygulamalarına izin verilmesini, statvision için ayrı çıkış yolunu ve PID/başlangıç zamanı eşlemesini kapsar. Güç testleri mW/W ve V×A dönüşümlerini, şarj/tüketim ayrımını, unsigned akımı, geçersiz alanları ve pil yedeğini kapsar. CPU kapsamı testleri yeni yardımcı işlemde ölçülen payın korunmasını, kısmi ölçümün tamamlanmasını, %100/%2,8 örneğini ve negatif kalan payın uydurulmamasını kapsar.
+68 XCTest, gerçek sistemden bağımsız kontrollü sayaç girdileriyle hesaplamaları denetler. Uygulama çalışma zamanında bu test girdilerini veya rastgele veri kullanmaz. Uygulama sıralaması testleri yardımcı işlem toplamlarını, Apple Silicon zaman dönüşümünü, PID yeniden kullanımını, panel kapanışındaki taban sıfırlamayı ve iki ayrı ilk 5 sıralamasını da kapsar. Sıcaklık testleri çip sensörü önceliğini, PMU yedeğini, pil/ortam ayrımını, geçersiz değerleri ve eksik ölçümleri denetler. Menü çubuğu testleri sekiz gösterge kombinasyonunu, tüm değerler gizliyken erişilebilir kimliği ve eksik ölçüm gösterimini kapsar. Kapatma testleri sistem uygulamalarının korunmasını, normal Apple uygulamalarına izin verilmesini, statvision için ayrı çıkış yolunu ve PID/başlangıç zamanı eşlemesini kapsar. Güç testleri mW/W ve V×A dönüşümlerini, şarj/tüketim ayrımını, unsigned akımı, geçersiz alanları ve pil yedeğini kapsar. CPU kapsamı testleri yeni yardımcı işlemde ölçülen payın korunmasını, kısmi ölçümün tamamlanmasını, %100/%2,8 örneğini ve negatif kalan payın uydurulmamasını kapsar.
 
 Kapsam: ilk CPU örneği; lifetime yerine delta; nice sayacı; 0/100 sınırları; çok çekirdek normalizasyonu; sıfır fark; sayaç sıfırlanması/32 bit taşma; uzun boşluk/uyku; geçersiz zaman; fiziksel sıkıştırma; dosya önbelleği ayrımı; çalışma zamanı sayfa boyutu; çıkarma/çarpma/toplama taşmaları; GB birimi; 1/2/5 saniyede ve değişen aralıklarda gerçek 60 saniye; eksik geçmiş; bildirilmemiş baskı değerleri.
 
@@ -220,7 +236,7 @@ Proje dosya başvurularını, kaynak hedef üyeliklerini, paylaşılan şemayı 
 ruby scripts/validate_project.rb
 ```
 
-**Son doğrulama — 16 Kasım 2026:** Apple Silicon üzerinde Xcode 27.2 ile Debug ve Apple Silicon + Intel Release uygulama derlemeleri başarılı. `swift test` ve Xcode test hedefinde ayrı ayrı **60 test, 0 hata**. Proje başvuruları, hedef üyelikleri, paylaşılan şema ve plist denetimleri geçti. Release paketinin iki mimarisi ve yerel imza bütünlüğü doğrulandı. CPU düzeltmesi üç gerçek ölçüm çerçevesinde ayrıca sınandı: host ve uygulama toplamı aynı çerçeveden geldi, görünen pay ile diğer/ölçülemeyen payın toplamı host yüzdesiyle eşleşti. Güç kartının masaüstüne kurulan sürümde gerçek SystemLoad verisini watt olarak gösterdiği kontrol edildi; paylaşım ZIP’i proje klasöründe güncellendi. Ayrı bir yerel test uygulamasıyla × düğmesi denendi: ilk kapatma isteği uygulama tarafından iptal edildi ve uygulama açık kaldı; ikinci istekte normal çıkış geri çağrısı çalıştı ve satır listeden kaldırıldı. Kullanıcının açık uygulamaları bu testte kapatılmadı. Masaüstüne kurulan sürümde ok düğmesiyle uygulama listesini açma/kapatma ve CPU/RAM/sıcaklık anahtarlarını bağımsız değiştirme denendi. Sıcaklık normal kullanıcı yetkileriyle gerçek çip sensöründen okundu; bağlantı sıfırlanıp yeniden okuma denendi ve masaüstüne kurulan uygulamanın sıcaklık satırında gerçek °C değeri görüldü. Önceki doğrulamada iki ayrı ilk 5 uygulama listesi, yardımcı işlem toplamları, açık/koyu panel çizimi ve panel kapanınca sonuçların bırakılması kontrol edildi; tek çekirdekte kontrollü yoğun iş yüküyle Mach zaman dönüşümü doğrulandı (bir çekirdek ölçeğinde yaklaşık %100). VoiceOver, pil tüketimi ve gerçek cihaz uyku/uyanma davranışı ayrıca doğrulanmalıdır. Intel donanımında ve minimum macOS 13 üzerinde çalışma ayrıca denenmedi.
+**Son doğrulama — 16 Kasım 2026:** Göz modu için sekiz davranış testi eklendi. Gerçek sistem verileriyle koyu/açık ana panel, uygulama bölümü, ayarlar ve cam önizleme çizimleri kontrol edildi. Kendi geçici menü simgesine yerel izleme geri çağrıları gönderilerek önizlemenin açılması, fare çıkışı/ana panel/uykuda/mod değişiminde kapanması, klavye odağını almaması, uygulama taramasını başlatmaması ve mod tercihinin saklanması doğrulandı. Fiziksel fareyle uçtan uca kullanım ve gerçek göz kırpmanın görsel akışı ayrıca cihazda denenmelidir. Apple Silicon üzerinde Xcode 27.2 ile Debug ve Apple Silicon + Intel Release uygulama derlemeleri başarılı. `swift test` ve Xcode test hedefinde ayrı ayrı **68 test, 0 hata**. Proje başvuruları, hedef üyelikleri, paylaşılan şema ve plist denetimleri geçti. Release paketinin iki mimarisi ve yerel imza bütünlüğü doğrulandı. CPU düzeltmesi üç gerçek ölçüm çerçevesinde ayrıca sınandı: host ve uygulama toplamı aynı çerçeveden geldi, görünen pay ile diğer/ölçülemeyen payın toplamı host yüzdesiyle eşleşti. Güç kartının masaüstüne kurulan sürümde gerçek SystemLoad verisini watt olarak gösterdiği kontrol edildi; paylaşım ZIP’i proje klasöründe güncellendi. Ayrı bir yerel test uygulamasıyla × düğmesi denendi: ilk kapatma isteği uygulama tarafından iptal edildi ve uygulama açık kaldı; ikinci istekte normal çıkış geri çağrısı çalıştı ve satır listeden kaldırıldı. Kullanıcının açık uygulamaları bu testte kapatılmadı. Masaüstüne kurulan sürümde ok düğmesiyle uygulama listesini açma/kapatma ve CPU/RAM/sıcaklık anahtarlarını bağımsız değiştirme denendi. Sıcaklık normal kullanıcı yetkileriyle gerçek çip sensöründen okundu; bağlantı sıfırlanıp yeniden okuma denendi ve masaüstüne kurulan uygulamanın sıcaklık satırında gerçek °C değeri görüldü. Önceki doğrulamada iki ayrı ilk 5 uygulama listesi, yardımcı işlem toplamları, açık/koyu panel çizimi ve panel kapanınca sonuçların bırakılması kontrol edildi; tek çekirdekte kontrollü yoğun iş yüküyle Mach zaman dönüşümü doğrulandı (bir çekirdek ölçeğinde yaklaşık %100). VoiceOver, pil tüketimi ve gerçek cihaz uyku/uyanma davranışı ayrıca doğrulanmalıdır. Intel donanımında ve minimum macOS 13 üzerinde çalışma ayrıca denenmedi.
 
 Önerilen kısa cihaz kontrolü: önce boşta CPU/RAM’i gözleyin; ardından normal bir iş yüküyle Etkinlik Monitörü’nün toplam CPU değerini karşılaştırın. Yenileme aralığını değiştirin, paneli kapatıp menü değerlerinin devam ettiğini kontrol edin, Mac’i uyutup uyandırın. İlk CPU değerinin yeniden beklendiğini ve uyku boşluğunun çizilmediğini doğrulayın. Sistem/Açık/Koyu görünümü ve klavye kısayollarını deneyin.
 
