@@ -32,6 +32,13 @@ final class MonitoringStore: ObservableObject {
     @Published var menuBarMode: MenuBarMode {
         didSet { defaults.set(menuBarMode.rawValue, forKey: "menuBarMode") }
     }
+    @Published var eyeBlinkInterval: Int {
+        didSet {
+            let valid = EyeBlinkTiming.validated(eyeBlinkInterval)
+            if eyeBlinkInterval != valid { eyeBlinkInterval = valid }
+            defaults.set(valid, forKey: "eyeBlinkInterval")
+        }
+    }
     @Published var applicationsExpanded: Bool {
         didSet {
             guard applicationsExpanded != oldValue else { return }
@@ -99,6 +106,7 @@ final class MonitoringStore: ObservableObject {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         menuBarMode = MenuBarMode(rawValue: defaults.string(forKey: "menuBarMode") ?? "") ?? .metrics
+        eyeBlinkInterval = EyeBlinkTiming.validated(defaults.integer(forKey: "eyeBlinkInterval"))
         applicationsExpanded = defaults.object(forKey: "applicationsExpanded") as? Bool ?? false
         menuBarVisibility = MenuBarVisibility(
             showCPU: defaults.object(forKey: "menuBarShowCPU") as? Bool ?? true,

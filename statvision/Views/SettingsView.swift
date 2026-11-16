@@ -22,6 +22,21 @@ struct SettingsView: View {
                 .pickerStyle(.segmented).labelsHidden()
                 Text("Göz modunda simge göz kırpar. Üzerine gelince CPU, RAM, sıcaklık ve güç küçük bir cam panelde görünür. Tıklamak tam paneli açar.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Divider().padding(.vertical, 3)
+                Stepper(value: $store.eyeBlinkInterval, in: EyeBlinkTiming.range) {
+                    HStack {
+                        Text("Göz kırpma aralığı")
+                        Spacer()
+                        Text("\(store.eyeBlinkInterval) saniye").monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityLabel("Göz kırpma aralığı")
+                .accessibilityValue("\(store.eyeBlinkInterval) saniye")
+                .accessibilityHint("1 ile 30 saniye arasında ayarlayın")
+                .disabled(store.menuBarMode != .eye)
+                Text("1–30 saniye · Varsayılan 3 saniye. Seçimin otomatik kaydedilir.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             .monitorCard()
             VStack(alignment: .leading, spacing: 10) {

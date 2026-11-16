@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 
 /// Uses local tracking areas only: no event tap, input monitoring or polling.
@@ -10,6 +11,8 @@ final class EyeModeController {
     private let images = [EyeArtwork.statusImage(), EyeArtwork.statusImage(openness: 0.28),
                           EyeArtwork.statusImage(openness: 0.025)]
     private var phase = 0
+    private var blinkInterval = EyeBlinkTiming.defaultSeconds
+    private var timingSubscription: AnyCancellable?
     private var blinkTimer: DispatchSourceTimer?
     private var blinkTask: Task<Void, Never>?
     private var showTask: Task<Void, Never>?
@@ -39,6 +42,9 @@ final class EyeModeController {
                     self.refresh()
                 }
             }
+        timingSubscription = store.$eyeBlinkInterval.removeDuplicates().sink { [weak self] seconds in
+            self?.setBlinkInterval(seconds)
+        }
     }
 
     func setEnabled(_ enabled: Bool) {
@@ -59,6 +65,14 @@ final class EyeModeController {
     }
 
     func applyAppearance(_ appearance: NSAppearance?) { panel?.appearance = appearance }
+
+    private func setBlinkInterval(_ seconds: Int) {
+        let interval = EyeBlinkTiming.validated(seconds)
+        guard blinkInterval != interval else { return }
+        blinkInterval = interval
+        stopBlinking()
+        refresh()
+    }
 
     private func refresh() {
         if state.shouldBlink { startBlinking() } else { stopBlinking() }
@@ -94,7 +108,8 @@ final class EyeModeController {
     private func startBlinking() {
         guard blinkTimer == nil else { return }
         let timer = DispatchSource.makeTimerSource(queue: .main)
-        timer.schedule(deadline: .now() + 5, repeating: 5, leeway: .milliseconds(700))
+        timer.schedule(deadline: .now() + Double(blinkInterval), repeating: Double(blinkInterval),
+                       leeway: .milliseconds(200))
         timer.setEventHandler { [weak self] in self?.blink() }
         blinkTimer = timer
         timer.resume()
@@ -172,6 +187,8 @@ final class EyeModeController {
 
     func stop() {
         state.enabled = false
+        timingSubscription?.cancel()
+        timingSubscription = nil
         stopBlinking()
         showTask?.cancel()
         hideTask?.cancel()

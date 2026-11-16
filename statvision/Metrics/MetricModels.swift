@@ -134,6 +134,15 @@ enum MenuBarMode: String, CaseIterable, Identifiable {
     var title: String { self == .eye ? "Göz modu" : "Göstergeler" }
 }
 
+enum EyeBlinkTiming {
+    static let range = 1...30
+    static let defaultSeconds = 3
+
+    static func validated(_ seconds: Int) -> Int {
+        range.contains(seconds) ? seconds : defaultSeconds
+    }
+}
+
 struct EyeInteractionState: Equatable {
     var enabled = false
     var statusHovered = false

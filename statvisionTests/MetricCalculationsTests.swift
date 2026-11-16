@@ -5,6 +5,40 @@ import XCTest
 @testable import statvision
 #endif
 
+#if !SWIFT_PACKAGE
+final class EyeBlinkPreferencesTests: XCTestCase {
+    func testMissingAndInvalidStoredIntervalsRecoverToThreeSeconds() async {
+        await MainActor.run {
+            let domain = "com.statvision.tests.blink.\(UUID().uuidString)"
+            let defaults = UserDefaults(suiteName: domain)!
+            defer { defaults.removePersistentDomain(forName: domain) }
+            XCTAssertEqual(MonitoringStore(defaults: defaults).eyeBlinkInterval, 3)
+            for invalid in [0, -1, 31, Int.max] {
+                defaults.set(invalid, forKey: "eyeBlinkInterval")
+                XCTAssertEqual(MonitoringStore(defaults: defaults).eyeBlinkInterval, 3)
+            }
+        }
+    }
+
+    func testIntervalChangesPersistAcrossStoreRecreationAndRejectInvalidInput() async {
+        await MainActor.run {
+            let domain = "com.statvision.tests.blink.\(UUID().uuidString)"
+            let defaults = UserDefaults(suiteName: domain)!
+            defer { defaults.removePersistentDomain(forName: domain) }
+            let store = MonitoringStore(defaults: defaults)
+            for seconds in [1, 3, 5, 30] {
+                store.eyeBlinkInterval = seconds
+                XCTAssertEqual(defaults.integer(forKey: "eyeBlinkInterval"), seconds)
+                XCTAssertEqual(MonitoringStore(defaults: defaults).eyeBlinkInterval, seconds)
+            }
+            store.eyeBlinkInterval = -100
+            XCTAssertEqual(store.eyeBlinkInterval, 3)
+            XCTAssertEqual(defaults.integer(forKey: "eyeBlinkInterval"), 3)
+        }
+    }
+}
+#endif
+
 final class EyeInteractionTests: XCTestCase {
     func testDisabledModeNeverShowsPreviewOrBlinks() {
         let state = EyeInteractionState(statusHovered: true, previewHovered: true)
