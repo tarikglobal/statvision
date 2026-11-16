@@ -2,10 +2,91 @@ import XCTest
 #if SWIFT_PACKAGE
 @testable import StatvisionMetrics
 #else
+import AppKit
 @testable import statvision
 #endif
 
+final class EyeLoadLevelTests: XCTestCase {
+    private func level(_ percent: Double) -> EyeLoadLevel {
+        EyeLoadLevel(cpu: CPUReading(percentage: percent, status: .valid))
+    }
+
+    func testLowLoadIncludesIdleAndValuesBelowFifty() {
+        XCTAssertEqual(level(0), .low)
+        XCTAssertEqual(level(25), .low)
+        XCTAssertEqual(level(49.999), .low)
+    }
+
+    func testExactThresholdsAndFullLoad() {
+        XCTAssertEqual(level(50), .moderate)
+        XCTAssertEqual(level(79.999), .moderate)
+        XCTAssertEqual(level(80), .high)
+        XCTAssertEqual(level(90), .high)
+        XCTAssertEqual(level(100), .overloaded)
+    }
+
+    func testTearAppearsOnlyAboveNinetyWithAValidMeasurement() {
+        XCTAssertEqual(level(89.999), .high)
+        XCTAssertEqual(level(90), .high)
+        XCTAssertEqual(level(90.001), .overloaded)
+        XCTAssertEqual(EyeLoadLevel(cpu: CPUReading(percentage: 100, status: .sleeping)), .unavailable)
+    }
+
+    func testMissingAndFailedMeasurementsNeverAppearHealthy() {
+        XCTAssertEqual(EyeLoadLevel(cpu: nil), .unavailable)
+        XCTAssertEqual(EyeLoadLevel(cpu: CPUReading(percentage: nil, status: .valid)), .unavailable)
+        for status: CPUStatus in [.warmingUp, .unavailable, .invalidCounter, .zeroDelta, .interrupted, .sleeping] {
+            XCTAssertEqual(EyeLoadLevel(cpu: CPUReading(percentage: 0, status: status)), .unavailable)
+        }
+    }
+
+    func testNonfiniteAndOutOfRangeMeasurementsAreUnavailable() {
+        for value in [Double.nan, .infinity, -.infinity, -1, 100.001] {
+            XCTAssertEqual(level(value), .unavailable)
+        }
+    }
+}
+
 #if !SWIFT_PACKAGE
+final class EyeLoadArtworkTests: XCTestCase {
+    func testLoadColorsSurviveAppKitRenderingInEveryBlinkPhase() async throws {
+        try await MainActor.run {
+            XCTAssertTrue(EyeArtwork.statusImage().isTemplate)
+            for load: EyeLoadLevel in [.low, .moderate, .high, .overloaded] {
+                for openness: CGFloat in [1, 0.28, 0.025] {
+                    let image = EyeArtwork.statusImage(openness: openness, load: load)
+                    XCTAssertFalse(image.isTemplate, "macOS must preserve load color")
+                    let bitmap = try XCTUnwrap(NSBitmapImageRep(data: XCTUnwrap(image.tiffRepresentation)))
+                    var red = 0.0, green = 0.0, blue = 0.0, alpha = 0.0
+                    var tearPixels = 0, redPixels = 0
+                    for y in 0..<bitmap.pixelsHigh {
+                        for x in 0..<bitmap.pixelsWide {
+                            guard let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB) else { continue }
+                            red += color.redComponent * color.alphaComponent
+                            green += color.greenComponent * color.alphaComponent
+                            blue += color.blueComponent * color.alphaComponent
+                            alpha += color.alphaComponent
+                            if color.alphaComponent > 0.5, color.blueComponent > color.redComponent * 2,
+                               color.blueComponent > color.greenComponent * 1.1 { tearPixels += 1 }
+                            if color.alphaComponent > 0.5, color.redComponent > color.greenComponent * 2,
+                               color.redComponent > color.blueComponent * 2 { redPixels += 1 }
+                        }
+                    }
+                    XCTAssertGreaterThan(alpha, 0, "Even the closed eye must remain visible")
+                    switch load {
+                    case .low: XCTAssertGreaterThan(green, red); XCTAssertGreaterThan(green, blue)
+                    case .moderate: XCTAssertGreaterThan(red, green); XCTAssertGreaterThan(green, blue)
+                    case .high: XCTAssertGreaterThan(red, green * 2); XCTAssertGreaterThan(red, blue * 2)
+                    case .overloaded: XCTAssertGreaterThan(redPixels, 0, "Eye must stay red alongside the blue tear")
+                    case .unavailable: XCTFail("Unexpected test level")
+                    }
+                    XCTAssertEqual(tearPixels > 0, load == .overloaded, "Tear must remain visible in every blink phase only above 90%")
+                }
+            }
+        }
+    }
+}
+
 final class EyeBlinkPreferencesTests: XCTestCase {
     func testMissingAndInvalidStoredIntervalsRecoverToThreeSeconds() async {
         await MainActor.run {

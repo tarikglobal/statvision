@@ -4,15 +4,18 @@ struct HoverPreview: View {
     @ObservedObject var store: MonitoringStore
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    private var load: EyeLoadLevel { EyeLoadLevel(cpu: store.latest?.cpu) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                EyeMark().frame(width: 29, height: 18)
+                EyeMark(load: load).frame(width: 29, height: 18)
                 Text("statvision").font(.system(size: 12, weight: .heavy, design: .rounded))
                 Spacer()
-                Circle().fill(StatvisionPalette.accent(scheme)).frame(width: 5, height: 5)
-                Text("CANLI").font(.system(size: 8, weight: .bold, design: .monospaced)).tracking(1)
+                Circle().fill(Color(nsColor: EyeArtwork.statusColor(for: load))).frame(width: 5, height: 5)
+                    .accessibilityHidden(true)
+                Text(load.shortTitle).font(.system(size: 8, weight: .bold, design: .monospaced)).tracking(1)
+                    .accessibilityLabel(load.title).help(EyeLoadLevel.explanation)
             }
             HStack(spacing: 8) {
                 tile("CPU", value: store.cpuText, color: StatvisionPalette.accent(scheme))

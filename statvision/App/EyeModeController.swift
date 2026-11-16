@@ -8,8 +8,10 @@ final class EyeModeController {
     private weak var button: NSStatusBarButton?
     private let store: MonitoringStore
     private var state = EyeInteractionState()
-    private let images = [EyeArtwork.statusImage(), EyeArtwork.statusImage(openness: 0.28),
-                          EyeArtwork.statusImage(openness: 0.025)]
+    private let images = Dictionary(uniqueKeysWithValues: EyeLoadLevel.allCases.map { load in
+        (load, [1.0, 0.28, 0.025].map { EyeArtwork.statusImage(openness: $0, load: load) })
+    })
+    private var load = EyeLoadLevel.unavailable
     private var phase = 0
     private var blinkInterval = EyeBlinkTiming.defaultSeconds
     private var timingSubscription: AnyCancellable?
@@ -22,7 +24,7 @@ final class EyeModeController {
     private var panel: EyePreviewPanel?
     private var accessibilityObserver: NSObjectProtocol?
 
-    var currentImage: NSImage { images[phase] }
+    var currentImage: NSImage { images[load]![phase] }
 
     init(button: NSStatusBarButton, store: MonitoringStore) {
         self.button = button
@@ -51,6 +53,13 @@ final class EyeModeController {
         guard state.enabled != enabled else { return }
         state.enabled = enabled
         refresh()
+    }
+
+    func updateLoad(_ cpu: CPUReading?) {
+        let next = EyeLoadLevel(cpu: cpu)
+        guard load != next else { return }
+        load = next
+        if state.enabled { button?.image = currentImage }
     }
 
     func setMainPanelOpen(_ open: Bool) {
@@ -122,7 +131,7 @@ final class EyeModeController {
             for (image, delay) in [(1, UInt64(55_000_000)), (2, 80_000_000), (1, 55_000_000), (0, 0)] {
                 guard let self, !Task.isCancelled, self.state.shouldBlink else { return }
                 self.phase = image
-                self.button?.image = self.images[image]
+                self.button?.image = self.currentImage
                 if delay > 0 {
                     do { try await Task.sleep(nanoseconds: delay) } catch { return }
                 }
@@ -137,7 +146,7 @@ final class EyeModeController {
         blinkTask = nil
         if phase != 0 {
             phase = 0
-            if state.enabled { button?.image = images[0] }
+            if state.enabled { button?.image = currentImage }
         }
     }
 

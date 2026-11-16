@@ -20,7 +20,7 @@ struct SettingsView: View {
                     ForEach(MenuBarMode.allCases) { mode in Text(mode.title).tag(mode) }
                 }
                 .pickerStyle(.segmented).labelsHidden()
-                Text("Göz modunda simge göz kırpar. Üzerine gelince CPU, RAM, sıcaklık ve güç küçük bir cam panelde görünür. Tıklamak tam paneli açar.")
+                Text("Gözün üzerine gelince ölçümler, tıklayınca tam panel açılır. CPU yükü: <%50 yeşil, %50–79 turuncu, ≥%80 kırmızı. %90 üzerinde gözyaşı çıkar.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 Divider().padding(.vertical, 3)
                 Stepper(value: $store.eyeBlinkInterval, in: EyeBlinkTiming.range) {

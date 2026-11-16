@@ -134,6 +134,41 @@ enum MenuBarMode: String, CaseIterable, Identifiable {
     var title: String { self == .eye ? "Göz modu" : "Göstergeler" }
 }
 
+enum EyeLoadLevel: String, CaseIterable {
+    case unavailable, low, moderate, high, overloaded
+
+    init(cpu: CPUReading?) {
+        guard let cpu, cpu.status == .valid, let value = cpu.percentage,
+              value.isFinite, (0...100).contains(value) else {
+            self = .unavailable
+            return
+        }
+        self = value > 90 ? .overloaded : value >= 80 ? .high : value >= 50 ? .moderate : .low
+    }
+
+    var title: String {
+        switch self {
+        case .unavailable: return "CPU yükü ölçülemiyor"
+        case .low: return "Düşük CPU yükü"
+        case .moderate: return "Orta CPU yükü"
+        case .high: return "Yüksek CPU yükü"
+        case .overloaded: return "Çok yüksek CPU yükü; gözyaşı gösteriliyor"
+        }
+    }
+
+    var shortTitle: String {
+        switch self {
+        case .unavailable: return "BEKLENİYOR"
+        case .low: return "DÜŞÜK"
+        case .moderate: return "ORTA"
+        case .high: return "YÜKSEK"
+        case .overloaded: return "ÇOK YÜKSEK"
+        }
+    }
+
+    static let explanation = "CPU yükü: %50 altında yeşil, %50–79 turuncu, %80 ve üzeri kırmızı. %90 üzerinde gözyaşı gösterilir. Ölçüm yoksa gri."
+}
+
 enum EyeBlinkTiming {
     static let range = 1...30
     static let defaultSeconds = 3

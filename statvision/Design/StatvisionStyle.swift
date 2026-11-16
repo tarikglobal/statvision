@@ -14,6 +14,7 @@ enum StatvisionPalette {
 }
 
 struct EyeMark: View {
+    var load: EyeLoadLevel? = nil
     @Environment(\.colorScheme) private var scheme
     var body: some View {
         Canvas { context, size in
@@ -21,8 +22,13 @@ struct EyeMark: View {
                 cg.translateBy(x: 0, y: size.height)
                 cg.scaleBy(x: 1, y: -1)
                 EyeArtwork.draw(in: cg, rect: CGRect(origin: .zero, size: size).insetBy(dx: 2, dy: 1),
-                    primary: NSColor(StatvisionPalette.accent(scheme)).cgColor,
-                    secondary: NSColor(StatvisionPalette.cyan(scheme)).cgColor)
+                    primary: (load.map { EyeArtwork.statusColor(for: $0) }
+                        ?? NSColor(StatvisionPalette.accent(scheme))).cgColor,
+                    secondary: (load.map { EyeArtwork.statusColor(for: $0) }
+                        ?? NSColor(StatvisionPalette.cyan(scheme))).cgColor)
+                if load == .overloaded {
+                    EyeArtwork.drawTear(in: cg, rect: CGRect(origin: .zero, size: size).insetBy(dx: 2, dy: 1))
+                }
             }
         }
         .accessibilityHidden(true)

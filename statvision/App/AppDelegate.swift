@@ -70,15 +70,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     private func updateStatus(_ sample: SystemSample?, visibility: MenuBarVisibility, mode: MenuBarMode) {
         guard let button = statusItem?.button else { return }
+        eyeController?.updateLoad(sample?.cpu)
         eyeController?.setEnabled(mode == .eye)
         if mode == .eye {
             button.title = ""
             button.image = eyeController?.currentImage ?? fallbackIcon
             let allMetrics = MenuBarPresentation.make(sample: sample, visibility: MenuBarVisibility())
             let power = sample?.power?.text ?? "— W"
-            button.setAccessibilityValue("Göz modu. \(allMetrics.accessibilityValue), güç \(power)")
+            let load = EyeLoadLevel(cpu: sample?.cpu)
+            button.setAccessibilityValue("Göz modu. \(load.title). \(allMetrics.accessibilityValue), güç \(power)")
             button.toolTip = nil
-            button.setAccessibilityHelp("Üzerine gelince CPU, RAM, sıcaklık ve güç önizlemesi gösterilir. Tıklayınca tam panel açılır.")
+            button.setAccessibilityHelp("Üzerine gelince CPU, RAM, sıcaklık ve güç önizlemesi gösterilir. Tıklayınca tam panel açılır. \(EyeLoadLevel.explanation)")
             return
         }
         let presentation = MenuBarPresentation.make(sample: sample, visibility: visibility)

@@ -45,15 +45,47 @@ enum EyeArtwork {
         context.restoreGState()
     }
 
-    static func statusImage(openness: CGFloat = 1) -> NSImage {
+    static func statusColor(for load: EyeLoadLevel) -> NSColor {
+        switch load {
+        case .low: return NSColor(srgbRed: 0.10, green: 0.64, blue: 0.28, alpha: 1)
+        case .moderate: return NSColor(srgbRed: 0.89, green: 0.40, blue: 0.02, alpha: 1)
+        case .high, .overloaded: return NSColor(srgbRed: 0.95, green: 0.22, blue: 0.25, alpha: 1)
+        case .unavailable: return NSColor(srgbRed: 0.55, green: 0.55, blue: 0.55, alpha: 1)
+        }
+    }
+
+    static func drawTear(in context: CGContext, rect: CGRect) {
+        let x = rect.minX + rect.width * 0.76
+        let top = rect.minY + rect.height * 0.25
+        let width = rect.width * 0.14
+        let height = rect.height * 0.28
+        let tear = CGMutablePath()
+        tear.move(to: CGPoint(x: x, y: top))
+        tear.addCurve(to: CGPoint(x: x, y: top - height),
+                      control1: CGPoint(x: x + width, y: top - height * 0.65),
+                      control2: CGPoint(x: x + width * 0.55, y: top - height))
+        tear.addCurve(to: CGPoint(x: x, y: top),
+                      control1: CGPoint(x: x - width * 0.55, y: top - height),
+                      control2: CGPoint(x: x - width, y: top - height * 0.65))
+        tear.closeSubpath()
+        context.saveGState()
+        context.addPath(tear)
+        context.setFillColor(NSColor(srgbRed: 0.10, green: 0.72, blue: 0.95, alpha: 1).cgColor)
+        context.fillPath()
+        context.restoreGState()
+    }
+
+    static func statusImage(openness: CGFloat = 1, load: EyeLoadLevel? = nil) -> NSImage {
         let image = NSImage(size: NSSize(width: 27, height: 18), flipped: false) { bounds in
             guard let context = NSGraphicsContext.current?.cgContext else { return false }
             draw(in: context, rect: bounds.insetBy(dx: 1, dy: 1), openness: openness,
-                 primary: NSColor.black.cgColor)
+                 primary: (load.map { statusColor(for: $0) } ?? .black).cgColor)
+            if load == .overloaded { drawTear(in: context, rect: bounds.insetBy(dx: 1, dy: 1)) }
             return true
         }
-        image.isTemplate = true
-        image.accessibilityDescription = "statvision gözü"
+        // Template images are recolored by macOS, which would erase load colors.
+        image.isTemplate = load == nil
+        image.accessibilityDescription = load.map { "statvision gözü · \($0.title)" } ?? "statvision gözü"
         return image
     }
 
