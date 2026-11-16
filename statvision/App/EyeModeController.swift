@@ -94,7 +94,7 @@ final class EyeModeController {
     private func startBlinking() {
         guard blinkTimer == nil else { return }
         let timer = DispatchSource.makeTimerSource(queue: .main)
-        timer.schedule(deadline: .now() + 5, repeating: 6.8, leeway: .milliseconds(700))
+        timer.schedule(deadline: .now() + 5, repeating: 5, leeway: .milliseconds(700))
         timer.setEventHandler { [weak self] in self?.blink() }
         blinkTimer = timer
         timer.resume()

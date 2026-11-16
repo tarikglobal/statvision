@@ -23,7 +23,7 @@ Paneldeki **Güç tüketimi** kartı, Mac'in bildirdiği son tüketimi **W** ola
 
 ## Göz modu
 
-**Ayarlar → Menü çubuğu modu → Göz modu** seçin. Menüdeki yazılar tek bir göz simgesine dönüşür. Göz ara sıra kırpılır; fareyi üzerine götürdüğünüzde CPU, RAM, sıcaklık ve watt küçük, saydam bir panelde görünür. Fareyi uzaklaştırınca kapanır. Göze tıklamak ana ekranı açar. Normal yazılara dönmek için aynı yerden **Göstergeler** seçin. Mod tercihiniz hatırlanır.
+**Ayarlar → Menü çubuğu modu → Göz modu** seçin. Menüdeki yazılar tek bir göz simgesine dönüşür. Göz yaklaşık 5 saniyede bir kırpılır; fareyi üzerine götürdüğünüzde CPU, RAM, sıcaklık ve watt küçük, saydam bir panelde görünür. Fareyi uzaklaştırınca kapanır. Göze tıklamak ana ekranı açar. Normal yazılara dönmek için aynı yerden **Göstergeler** seçin. Mod tercihiniz hatırlanır.
 
 Sistemde **Hareketi azalt** açıksa göz kırpmaz; üzerine gelince değerleri yine gösterir. **Saydamlığı azalt** açıksa küçük panel opak görünür. Ana ekranın **Ayarlar** ve **Çıkış** düğmeleri aşağı kaydırmadan da erişilebilir.
 

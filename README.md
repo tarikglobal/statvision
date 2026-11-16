@@ -20,7 +20,7 @@ Hazır uygulamayı açmak ve başka Mac’lere göndermek için [kullanım ve pa
 
 **1.1.0** sürümü, tek vektör göz işaretinden üretilen uygulama/menü simgesi, neon yeşil ve turkuaz göstergeler, keskin tipografi ve açık/koyu renk paletleri içerir. Ayarlar ve Çıkış, kaydırılabilir içeriğin altında sabit kalır.
 
-**Ayarlar → Menü çubuğu modu → Göz modu** seçildiğinde sayılar yerine tek bir göz görünür. Yaklaşık 6,8 saniyede bir kısa göz kırpma için önbellekteki üç küçük simge kullanılır; sürekli animasyon veya fare konumu sorgusu yoktur. Üzerine gelince 180 ms sonra CPU, RAM, sıcaklık ve watt içeren yaklaşık 286 × 195 pt cam önizleme açılır. Fare önizlemeye taşınabilir; iki alandan da ayrılınca 240 ms içinde kapanır. Tıklamak asıl paneli açar. Ana panel, uyku veya başka mod seçimi önizlemeyi kapatır.
+**Ayarlar → Menü çubuğu modu → Göz modu** seçildiğinde sayılar yerine tek bir göz görünür. Yaklaşık 5 saniyede bir kısa göz kırpma için önbellekteki üç küçük simge kullanılır; sürekli animasyon veya fare konumu sorgusu yoktur. Üzerine gelince 180 ms sonra CPU, RAM, sıcaklık ve watt içeren yaklaşık 286 × 195 pt cam önizleme açılır. Fare önizlemeye taşınabilir; iki alandan da ayrılınca 240 ms içinde kapanır. Tıklamak asıl paneli açar. Ana panel, uyku veya başka mod seçimi önizlemeyi kapatır.
 
 Önizleme klavye odağını almaz, uygulamayı etkinleştirmez ve hiçbir giriş izni istemez; yalnızca yerel `NSTrackingArea` kullanır. Önizlemede grafik ve uygulama listesi bulunmaz; o alanlar kapalıyken işlem taraması başlamaz. Sistem **Hareketi azalt** seçeneği göz kırpmayı durdurur; üzerine gelme çalışmaya devam eder. **Saydamlığı azalt**, camı opak yüzeye dönüştürür. İlk kurulumda Göstergeler modu korunur; göz modu ve gösterge seçimleri yeniden başlatmalarda hatırlanır.
 
