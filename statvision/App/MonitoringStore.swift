@@ -106,16 +106,13 @@ final class MonitoringStore: ObservableObject {
         sampler.onSample = { [weak self] sample in
             DispatchQueue.main.async {
                 guard let self else { return }
-                self.history.append(sample)
+                self.history.append(sample.withoutApplications)
                 self.latest = sample
-            }
-        }
-        sampler.onApplications = { [weak self] session, snapshot in
-            DispatchQueue.main.async {
-                guard let self, self.applicationSession == session else { return }
-                self.applicationUsage = snapshot
-                self.hasApplicationSample = true
-                self.updateApplicationDescriptors()
+                if let session = self.applicationSession, session == sample.applicationSession {
+                    self.applicationUsage = sample.applications
+                    self.hasApplicationSample = true
+                    self.updateApplicationDescriptors()
+                }
             }
         }
     }

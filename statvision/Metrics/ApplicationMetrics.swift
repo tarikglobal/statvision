@@ -28,15 +28,17 @@ struct ApplicationUsage: Identifiable, Equatable {
     let memoryBytes: UInt64?
     let processCount: Int
     let processes: [ProcessIdentity]
+    let cpuIsPartial: Bool
 
     init(id: String, name: String, cpuPercentage: Double?, memoryBytes: UInt64?,
-         processCount: Int, processes: [ProcessIdentity] = []) {
+         processCount: Int, processes: [ProcessIdentity] = [], cpuIsPartial: Bool = false) {
         self.id = id
         self.name = name
         self.cpuPercentage = cpuPercentage
         self.memoryBytes = memoryBytes
         self.processCount = processCount
         self.processes = processes
+        self.cpuIsPartial = cpuIsPartial
     }
 }
 
@@ -71,6 +73,24 @@ enum ApplicationRanking: String, CaseIterable, Identifiable {
 struct ApplicationUsageSnapshot: Equatable {
     let applications: [ApplicationUsage]
     let unreadableProcesses: Int
+    let systemCPUPercentage: Double?
+
+    init(applications: [ApplicationUsage], unreadableProcesses: Int, systemCPUPercentage: Double? = nil) {
+        self.applications = applications
+        self.unreadableProcesses = unreadableProcesses
+        self.systemCPUPercentage = systemCPUPercentage
+    }
+
+    var cpuBreakdown: CPUUsageBreakdown? {
+        guard let total = systemCPUPercentage, total.isFinite, (0...100).contains(total) else { return nil }
+        let rows = topFive(by: .cpu)
+        guard !rows.isEmpty else { return nil }
+        let listed = rows.compactMap(\.cpuPercentage).reduce(0, +)
+        guard listed.isFinite else { return nil }
+        return CPUUsageBreakdown(total: total, listed: listed,
+                                 otherOrUnmeasured: listed <= total ? total - listed : nil,
+                                 isPartial: unreadableProcesses > 0 || rows.contains(where: \.cpuIsPartial))
+    }
 
     func topFive(by ranking: ApplicationRanking) -> [ApplicationUsage] {
         applications.filter {
@@ -87,6 +107,15 @@ struct ApplicationUsageSnapshot: Equatable {
     }
 }
 
+struct CPUUsageBreakdown: Equatable {
+    let total: Double
+    let listed: Double
+    /// Residual, not a separate direct measurement. Includes every workload
+    /// outside the five visible rows, plus unmeasured portions and system work.
+    let otherOrUnmeasured: Double?
+    let isPartial: Bool
+}
+
 struct ApplicationUsageCalculator {
     private var previous: [Int32: ProcessResourceSample] = [:]
 
@@ -94,7 +123,8 @@ struct ApplicationUsageCalculator {
 
     mutating func consume(_ samples: [ProcessResourceSample], secondsPerTick: Double,
                           processorCount: Int, maximumGap: TimeInterval,
-                          unreadableProcesses: Int = 0) -> ApplicationUsageSnapshot {
+                          unreadableProcesses: Int = 0,
+                          systemCPUPercentage: Double? = nil) -> ApplicationUsageSnapshot {
         // Keeping only this scan also drops exited and temporarily unreadable PIDs.
         let current = Dictionary(samples.filter { $0.timestamp.isFinite }.map { ($0.pid, $0) },
                                  uniquingKeysWith: { _, newest in newest })
@@ -103,7 +133,8 @@ struct ApplicationUsageCalculator {
         for sample in current.values { groups[sample.appID, default: []].append(sample) }
         let applications = groups.map { id, processes -> ApplicationUsage in
             var memory: UInt64? = 0
-            var cpu: Double? = 0
+            var cpu: Double = 0
+            var measuredProcesses = 0
             for process in processes {
                 if let bytes = memory {
                     let sum = bytes.addingReportingOverflow(process.memoryBytes)
@@ -112,23 +143,25 @@ struct ApplicationUsageCalculator {
                 guard let old = previous[process.pid], old.startTime == process.startTime,
                       old.appID == process.appID, process.cpuTicks >= old.cpuTicks,
                       processorCount > 0, secondsPerTick.isFinite, secondsPerTick > 0 else {
-                    cpu = nil
                     continue
                 }
                 let elapsed = process.timestamp - old.timestamp
-                guard elapsed > 0, elapsed <= maximumGap else { cpu = nil; continue }
+                guard elapsed > 0, elapsed <= maximumGap else { continue }
                 let percentage = Double(process.cpuTicks - old.cpuTicks) * secondsPerTick
                     / elapsed / Double(processorCount) * 100
-                guard percentage.isFinite else { cpu = nil; continue }
-                if let value = cpu { cpu = value + percentage }
+                guard percentage.isFinite else { continue }
+                cpu += percentage
+                measuredProcesses += 1
             }
             return ApplicationUsage(id: id, name: processes[0].appName,
-                                    cpuPercentage: cpu.map { min(100, max(0, $0)) },
+                                    cpuPercentage: measuredProcesses > 0 ? min(100, max(0, cpu)) : nil,
                                     memoryBytes: memory, processCount: processes.count,
                                     processes: processes.map { ProcessIdentity(pid: $0.pid, startTime: $0.startTime) }
-                                        .sorted { $0.pid < $1.pid })
+                                        .sorted { $0.pid < $1.pid },
+                                    cpuIsPartial: measuredProcesses < processes.count)
         }
         return ApplicationUsageSnapshot(applications: applications,
-                                        unreadableProcesses: unreadableProcesses)
+                                        unreadableProcesses: unreadableProcesses,
+                                        systemCPUPercentage: systemCPUPercentage)
     }
 }

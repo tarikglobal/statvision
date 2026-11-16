@@ -97,10 +97,13 @@ struct SystemSample: Equatable {
     let pressureSource: PressureSource
     let temperature: TemperatureReading?
     let power: PowerReading?
+    let applications: ApplicationUsageSnapshot?
+    let applicationSession: UUID?
 
     init(timestamp: TimeInterval, cpu: CPUReading, memory: MemoryReading?,
          pressure: MemoryPressure, pressureSource: PressureSource,
-         temperature: TemperatureReading? = nil, power: PowerReading? = nil) {
+         temperature: TemperatureReading? = nil, power: PowerReading? = nil,
+         applications: ApplicationUsageSnapshot? = nil, applicationSession: UUID? = nil) {
         self.timestamp = timestamp
         self.cpu = cpu
         self.memory = memory
@@ -108,6 +111,14 @@ struct SystemSample: Equatable {
         self.pressureSource = pressureSource
         self.temperature = temperature
         self.power = power
+        self.applications = applications
+        self.applicationSession = applicationSession
+    }
+
+    var withoutApplications: SystemSample {
+        SystemSample(timestamp: timestamp, cpu: cpu, memory: memory,
+                     pressure: pressure, pressureSource: pressureSource,
+                     temperature: temperature, power: power)
     }
 }
 

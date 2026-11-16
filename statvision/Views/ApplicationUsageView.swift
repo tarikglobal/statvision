@@ -65,6 +65,24 @@ struct ApplicationUsageView: View {
                 }
             }
             .frame(minHeight: 138, alignment: .top)
+            if ranking == .cpu, let breakdown = snapshot?.cpuBreakdown {
+                VStack(spacing: 4) {
+                    cpuShare("Toplam CPU", value: breakdown.total)
+                    cpuShare("Bu 5 satırda ölçülen", value: breakdown.listed)
+                    cpuShare("Diğer / ölçülemeyen", value: breakdown.otherOrUnmeasured)
+                }
+                .font(.caption2)
+                .help("Diğer / ölçülemeyen, toplam CPU ile bu beş satırda ölçülen payın farkıdır. Sistem işlemleri, arka plan işleri, diğer uygulamalar ve eksik ölçümler bu farkın içindedir.")
+                if breakdown.otherOrUnmeasured == nil {
+                    Text("Ölçüm farkı var; sonraki örnek bekleniyor.")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+            if ranking == .cpu, snapshot?.topFive(by: .cpu).contains(where: \.cpuIsPartial) == true {
+                Text("≥ işareti: yardımcı işlemlerin bir kısmı için yeni ölçüm bekleniyor.")
+                    .font(.caption2).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if let terminationMessage {
                 Text(terminationMessage).font(.caption2).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -72,17 +90,27 @@ struct ApplicationUsageView: View {
             }
             Text((snapshot?.unreadableProcesses ?? 0) > 0
                  ? "Bazı işlemler okunamadı; liste eksik olabilir."
-                 : "Yardımcı işlemler dahil · CPU: toplam kapasite %100")
+                 : "Yalnızca ilk 5 uygulama · CPU: tüm sistem %100")
                 .font(.caption2).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    private func cpuShare(_ title: String, value: Double?) -> some View {
+        HStack {
+            Text(title).foregroundStyle(.secondary)
+            Spacer()
+            Text(value.map { $0.formatted(.number.precision(.fractionLength(1))) + "%" } ?? "—")
+                .monospacedDigit()
+        }
+        .accessibilityElement(children: .combine)
     }
 
     private func value(for app: ApplicationUsage) -> String {
         switch ranking {
         case .cpu:
             guard let percentage = app.cpuPercentage else { return "—" }
-            return percentage.formatted(.number.precision(.fractionLength(1))) + "%"
+            return (app.cpuIsPartial ? "≥ " : "") + percentage.formatted(.number.precision(.fractionLength(1))) + "%"
         case .memory:
             guard let bytes = app.memoryBytes else { return "—" }
             let gb = Double(bytes) / 1_073_741_824

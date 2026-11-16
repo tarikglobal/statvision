@@ -12,7 +12,6 @@ enum SampleClock {
 /// The UI only receives immutable value snapshots.
 final class SystemSampler {
     var onSample: ((SystemSample) -> Void)?
-    var onApplications: ((UUID, ApplicationUsageSnapshot?) -> Void)?
     private let queue = DispatchQueue(label: "com.statvision.sampling", qos: .utility)
     private let reader = SystemReader()
     private let applicationSampler = ApplicationSampler()
@@ -28,20 +27,23 @@ final class SystemSampler {
 
     func start(interval: TimeInterval) {
         queue.async { [weak self] in
-            guard let self else { return }
-            self.interval = [1.0, 2.0, 5.0].contains(interval) ? interval : 2
-            self.timer?.cancel()
-            self.calculator.reset()
-            self.applicationSampler.reset()
-            self.installPressureSourceIfNeeded()
-            self.sample()
-            let timer = DispatchSource.makeTimerSource(queue: self.queue)
-            timer.schedule(deadline: .now() + self.interval, repeating: self.interval,
-                           leeway: .milliseconds(150))
-            timer.setEventHandler { [weak self] in self?.sample() }
-            self.timer = timer
-            timer.resume()
+            self?.restartOnQueue(interval: interval)
         }
+    }
+
+    private func restartOnQueue(interval: TimeInterval) {
+        self.interval = [1.0, 2.0, 5.0].contains(interval) ? interval : 2
+        timer?.cancel()
+        calculator.reset()
+        applicationSampler.reset()
+        installPressureSourceIfNeeded()
+        sample()
+        let timer = DispatchSource.makeTimerSource(queue: queue)
+        timer.schedule(deadline: .now() + self.interval, repeating: self.interval,
+                       leeway: .milliseconds(150))
+        timer.setEventHandler { [weak self] in self?.sample() }
+        self.timer = timer
+        timer.resume()
     }
 
     func pauseForSleep() {
@@ -67,16 +69,10 @@ final class SystemSampler {
             self.applicationSession = session
             if changedSession {
                 self.applicationSampler.reset()
-                if session != nil { self.sampleApplications() }
+                // Both CPU counters start a fresh, common measurement interval.
+                if session != nil { self.restartOnQueue(interval: self.interval) }
             }
         }
-    }
-
-    private func sampleApplications() {
-        guard let session = applicationSession else { return }
-        let snapshot = applicationSampler.sample(applications: applications,
-                                                 maximumGap: max(15, interval * 3))
-        onApplications?(session, snapshot)
     }
 
     private func cancelSources() {
@@ -115,6 +111,11 @@ final class SystemSampler {
             calculator.reset()
             cpu = CPUReading(percentage: nil, status: .unavailable)
         }
+        // Read application counters immediately after host counters, with the
+        // same timestamp. Publish one frame instead of independently timed UI updates.
+        let applicationSnapshot = applicationSession == nil ? nil : applicationSampler.sample(
+            applications: applications, maximumGap: max(15, interval * 3),
+            at: timestamp, systemCPUPercentage: cpu.percentage)
         let pressure = reader.memoryPressure()
         let resolvedPressure = pressure != .unavailable ? pressure : notifiedPressure
         let origin: PressureSource = pressure != .unavailable ? .systemSnapshot
@@ -122,8 +123,8 @@ final class SystemSampler {
         onSample?(SystemSample(timestamp: timestamp, cpu: cpu, memory: reader.memory(),
                                pressure: resolvedPressure, pressureSource: origin,
                                temperature: temperatureReader.read(at: timestamp),
-                               power: powerReader.read(at: timestamp)))
-        sampleApplications()
+                               power: powerReader.read(at: timestamp),
+                               applications: applicationSnapshot, applicationSession: applicationSession))
     }
 
     deinit {

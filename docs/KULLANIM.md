@@ -11,6 +11,8 @@ Panelin altındaki **En çok tüketen 5 uygulama** başlığının yanındaki ok
 
 Panelin altındaki **Ayarlar** düğmesinden **Menü çubuğunda göster** seçeneklerine ulaşabilirsiniz. **CPU kullanımı**, **RAM kullanımı** ve **Sıcaklık** bağımsız olarak açılıp kapatılır; seçim anında uygulanır ve sonraki açılışta korunur. Üçünü de kapatırsanız paneli açabilmeniz için menü çubuğunda statvision simgesi kalır. Bu seçenekler ana paneldeki ölçümleri gizlemez.
 
+**Toplam CPU**, bütün bilgisayarın yüküdür; ilk 5 uygulamanın toplamına eşit olmak zorunda değildir. CPU listesinin altındaki **Bu 5 satırda ölçülen** ve **Diğer / ölçülemeyen** satırları farkı gösterir. Sistem servisleri, arka plan işleri ve listede olmayan uygulamalar da CPU kullanır. **≥** işareti görünen uygulamada bazı yardımcı işlemler için yeni ölçüm bekleniyordur; o anda ölçülebilen pay gösterilmeye devam eder.
+
 Listedeki bir uygulamayı kapatmak için satırın sağındaki **×** düğmesine tıklayın. Uygulamaya normal kapatma isteği gönderilir; kaydetme uyarısı varsa uygulamanın kendi penceresinde yanıtlayın. Kapatmayı iptal ederseniz uygulama açık kalır. Yanıt vermeyen uygulamalar otomatik olarak zorla kapatılmaz. Finder gibi sistem uygulamalarında ve statvision'ın kendi satırında × pasiftir; üzerine gelince açıklaması görünür.
 
 Uygulama menü çubuğunda çalışır; Dock’ta ayrı bir simge tutmaz. Finder `.app` paketini tek bir uygulama simgesi olarak gösterir. İçindeki dosyaları ayrı ayrı açmanız gerekmez.

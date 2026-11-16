@@ -18,7 +18,8 @@ final class ApplicationSampler {
 
     func reset() { calculator.reset() }
 
-    func sample(applications: [ApplicationDescriptor], maximumGap: TimeInterval)
+    func sample(applications: [ApplicationDescriptor], maximumGap: TimeInterval,
+                at timestamp: TimeInterval, systemCPUPercentage: Double?)
         -> ApplicationUsageSnapshot? {
         guard let pids = processIDs() else { reset(); return nil }
         let byPID = Dictionary(applications.map { ($0.pid, $0) },
@@ -52,12 +53,13 @@ final class ApplicationSampler {
             // rusage CPU counters are Mach absolute ticks, not nanoseconds on ARM.
             samples.append(ProcessResourceSample(pid: pid, startTime: usage.ri_proc_start_abstime,
                 appID: app.bundlePath, appName: app.name, cpuTicks: cpu.partialValue,
-                memoryBytes: usage.ri_phys_footprint, timestamp: SampleClock.now))
+                memoryBytes: usage.ri_phys_footprint, timestamp: timestamp))
         }
         unreadable += byPID.keys.filter { !found.contains($0) }.count
         return calculator.consume(samples, secondsPerTick: secondsPerTick,
                                   processorCount: processorCount, maximumGap: maximumGap,
-                                  unreadableProcesses: unreadable)
+                                  unreadableProcesses: unreadable,
+                                  systemCPUPercentage: systemCPUPercentage)
     }
 
     private func processIDs() -> [Int32]? {

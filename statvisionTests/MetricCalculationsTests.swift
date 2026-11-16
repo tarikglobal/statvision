@@ -259,12 +259,93 @@ final class ApplicationUsageTests: XCTestCase {
     func testOverflowIsUnavailableAndNewHelperDoesNotInventCPU() throws {
         var calculator = ApplicationUsageCalculator()
         _ = calculator.consume([process()], secondsPerTick: 1, processorCount: 1, maximumGap: 15)
-        let snapshot = calculator.consume([process(ticks: 200, memory: .max, at: 3),
+        let snapshot = calculator.consume([process(ticks: 102, memory: .max, at: 3),
                                           process(2, memory: 1, at: 3)],
                                          secondsPerTick: 1, processorCount: 1, maximumGap: 15)
         let app = try XCTUnwrap(snapshot.applications.first)
         XCTAssertNil(app.memoryBytes)
-        XCTAssertNil(app.cpuPercentage)
+        XCTAssertEqual(app.cpuPercentage, 100)
+        XCTAssertTrue(app.cpuIsPartial)
+    }
+}
+
+final class CPUAttributionTests: XCTestCase {
+    private func process(_ pid: Int32, ticks: UInt64, at timestamp: Double) -> ProcessResourceSample {
+        ProcessResourceSample(pid: pid, startTime: 1, appID: "/Browser.app", appName: "Browser",
+                              cpuTicks: ticks, memoryBytes: 100, timestamp: timestamp)
+    }
+
+    private func app(_ id: String, cpu: Double?, partial: Bool = false) -> ApplicationUsage {
+        ApplicationUsage(id: id, name: id, cpuPercentage: cpu, memoryBytes: 100,
+                         processCount: 1, cpuIsPartial: partial)
+    }
+
+    func testNewHelperKeepsMeasuredCPUAndBecomesCompleteOnNextInterval() throws {
+        var calculator = ApplicationUsageCalculator()
+        _ = calculator.consume([process(1, ticks: 100, at: 1)], secondsPerTick: 0.001,
+                               processorCount: 8, maximumGap: 15)
+        let partial = calculator.consume([process(1, ticks: 2100, at: 3), process(2, ticks: 50, at: 3)],
+                                         secondsPerTick: 0.001, processorCount: 8, maximumGap: 15)
+        XCTAssertEqual(try XCTUnwrap(partial.applications.first?.cpuPercentage), 12.5)
+        XCTAssertTrue(try XCTUnwrap(partial.applications.first).cpuIsPartial)
+        let complete = calculator.consume([process(1, ticks: 4100, at: 5), process(2, ticks: 2050, at: 5)],
+                                          secondsPerTick: 0.001, processorCount: 8, maximumGap: 15)
+        XCTAssertEqual(try XCTUnwrap(complete.applications.first?.cpuPercentage), 25)
+        XCTAssertFalse(try XCTUnwrap(complete.applications.first).cpuIsPartial)
+    }
+
+    func testInvalidHelperCounterDoesNotEraseHealthyMainProcessCPU() throws {
+        var calculator = ApplicationUsageCalculator()
+        _ = calculator.consume([process(1, ticks: 100, at: 1), process(2, ticks: 100, at: 1)],
+                               secondsPerTick: 0.001, processorCount: 8, maximumGap: 15)
+        let snapshot = calculator.consume([process(1, ticks: 2100, at: 3), process(2, ticks: 99, at: 3)],
+                                         secondsPerTick: 0.001, processorCount: 8, maximumGap: 15)
+        XCTAssertEqual(try XCTUnwrap(snapshot.applications.first?.cpuPercentage), 12.5)
+        XCTAssertTrue(try XCTUnwrap(snapshot.applications.first).cpuIsPartial)
+    }
+
+    func testScreenshotCaseExplainsRemainderWithoutInflatingApplicationPercentages() throws {
+        let values = [1.0, 0.9, 0.6, 0.2, 0.1]
+        let snapshot = ApplicationUsageSnapshot(applications: values.enumerated().map { app("\($0.offset)", cpu: $0.element) },
+                                                unreadableProcesses: 0, systemCPUPercentage: 100)
+        let breakdown = try XCTUnwrap(snapshot.cpuBreakdown)
+        XCTAssertEqual(breakdown.listed, 2.8, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(breakdown.otherOrUnmeasured), 97.2, accuracy: 0.0001)
+        XCTAssertEqual(snapshot.topFive(by: .cpu).compactMap(\.cpuPercentage), values)
+    }
+
+    func testComparisonIncludesOnlyFiveVisibleRows() throws {
+        let snapshot = ApplicationUsageSnapshot(applications: (1...7).map { app("\($0)", cpu: Double($0)) },
+                                                unreadableProcesses: 0, systemCPUPercentage: 50)
+        let breakdown = try XCTUnwrap(snapshot.cpuBreakdown)
+        XCTAssertEqual(breakdown.listed, 25)
+        XCTAssertEqual(breakdown.otherOrUnmeasured, 25)
+    }
+
+    func testInconsistentIntervalsDoNotInventANegativeOrClampedRemainder() throws {
+        let snapshot = ApplicationUsageSnapshot(applications: [app("Editor", cpu: 20)],
+                                                unreadableProcesses: 0, systemCPUPercentage: 10)
+        let breakdown = try XCTUnwrap(snapshot.cpuBreakdown)
+        XCTAssertEqual(breakdown.listed, 20)
+        XCTAssertNil(breakdown.otherOrUnmeasured)
+    }
+
+    func testMissingOrInvalidHostCPUHasNoComparison() {
+        for total: Double? in [nil, .nan, .infinity, -1, 101] {
+            XCTAssertNil(ApplicationUsageSnapshot(applications: [app("Editor", cpu: 10)],
+                                                  unreadableProcesses: 0, systemCPUPercentage: total).cpuBreakdown)
+        }
+        XCTAssertNil(ApplicationUsageSnapshot(applications: [app("Editor", cpu: nil)],
+                                              unreadableProcesses: 0, systemCPUPercentage: 50).cpuBreakdown)
+    }
+
+    func testPartialMeasurementsAreExplicitAndRemainMeasuredLowerBounds() throws {
+        let snapshot = ApplicationUsageSnapshot(applications: [app("Editor", cpu: 12.5, partial: true)],
+                                                unreadableProcesses: 0, systemCPUPercentage: 50)
+        let breakdown = try XCTUnwrap(snapshot.cpuBreakdown)
+        XCTAssertTrue(breakdown.isPartial)
+        XCTAssertEqual(breakdown.listed, 12.5)
+        XCTAssertEqual(breakdown.otherOrUnmeasured, 37.5)
     }
 }
 
